@@ -58,6 +58,8 @@ var adapter = utils.adapter({
         }
     },
     ready: function () {
+        adapter.config.vis = adapter.config.vis || 'vis.0';
+
         // Generate secret for session manager
         adapter.getForeignObject('system.adapter.web', function (err, obj) {
             if (!err && obj) {
@@ -130,6 +132,59 @@ function main() {
     }
 }
 
+function addUser(user, pw, options, callback) {
+    adapter.getForeignObject("system.user." + user, options, function (err, obj) {
+        if (obj) {
+            if (typeof callback == 'function') callback("User yet exists");
+        } else {
+            adapter.setForeignObject('system.user.' + user, {
+                type: 'user',
+                common: {
+                    name:    user,
+                    enabled: true,
+                    groups:  []
+                }
+            }, function () {
+                adapter.setPassword(user, pw, callback);
+            });
+        }
+    });
+}
+
+function _detectViews(projectDir, user, callback) {
+    adapter.readDir(adapter.config.vis, '/' + projectDir, {user: user, filter: true}, function (err, dirs) {
+        // find vis-views.json
+        for (var f = 0; f < dirs.length; f++) {
+            if (dirs[f].file == 'vis-views.json' && (!dirs[f].acl || dirs[f].acl.read)) {
+                return callback(err, {name: projectDir, readOnly: dirs[f].acl && !dirs[f].acl.write, owner: (dirs[f].acl ? dirs[f].acl.owner : '')});
+            }
+        }
+        callback(err);
+    });
+}
+
+function readProjects(user, callback) {
+    adapter.readDir(adapter.config.vis, '/', {user: user}, function (err, dirs) {
+        var result = [];
+        var count = 0;
+        if (err || !dirs) {
+            callback(err, result);
+            return;
+        }
+        for (var d = 0; d < dirs.length; d++) {
+            if (dirs[d].isDir) {
+                count++;
+                _detectViews(dirs[d].file, user, function (subErr, project) {
+                    if (project) result.push(project);
+
+                    err = err || subErr;
+                    if (!(--count)) callback(err, result);
+                });
+            }
+        }
+    }.bind(this));
+}
+
 //settings: {
 //    "port":   8080,
 //    "auth":   false,
@@ -192,6 +247,7 @@ function initWebServer(settings) {
                 extended: true
             }));
             server.app.use(bodyParser.json());
+            server.app.use(bodyParser.text());
             server.app.use(session({
                 secret:            secret,
                 saveUninitialized: true,
@@ -296,7 +352,7 @@ function initWebServer(settings) {
             }
 
             if (url.match(/^\/lib\//)) {
-                url = '/web' + url;
+                url = '/' + adapter.name + url;
             }
 
             url = url.split('/');
@@ -310,10 +366,60 @@ function initWebServer(settings) {
                 url = url.substring(0, pos);
             }
 
-            if (id == 'create.html' && !url) {
-                console.log(JSON.stringify(req.query));
+            // If create new user
+            if (id.match(/^create\.html/) && !url) {
                 res.contentType('application/javascript');
-                res.send(JSON.stringify({status: 'ok'}));
+                console.log(JSON.stringify(req.query));
+                if (!req.query.user || req.query.user.match(/\s/)) {
+                    res.send(JSON.stringify({error: 'Spaces are not allowed or empty user name'}));
+                } else if (req.query.user.match(/\./)) {
+                    res.send(JSON.stringify({error: 'Dots are not allowed in the user name'}));
+                } else if (!req.query.password) {
+                    res.send(JSON.stringify({error: 'Empty passwords are not allowed'}));
+                } else {
+                    addUser(req.query.user, req.query.password, {}, function (err) {
+                        if (err) {
+                            res.send(JSON.stringify({error: err}));
+                        } else {
+                            // store email
+                            adapter.getForeignObject('system.user.' + req.query.user, function (err, obj) {
+                                if (err || !obj) {
+                                    res.send(JSON.stringify({error: err}));
+                                } else {
+                                    obj.native = obj.native || {};
+                                    obj.native.email = req.query.mail;
+                                    adapter.setForeignObject('system.user.' + req.query.user, obj, function (err) {
+                                        if (err) {
+                                            res.send(JSON.stringify({error: err}));
+                                        } else {
+                                            // Add user to default group
+                                            if (adapter.config.newUserGroup) {
+                                                adapter.getForeignObject(adapter.config.newUserGroup, function (err, obj) {
+                                                    obj.common.members = obj.common.members || [];
+                                                    if (obj.common.members.indexOf('system.user.' + req.query.user) == -1) {
+                                                        obj.common.members.push('system.user.' + req.query.user);
+                                                        adapter.setForeignObject(adapter.config.newUserGroup, obj, function (err, obj) {
+                                                            if (err) {
+                                                                res.send(JSON.stringify({error: err}));
+                                                            } else {
+                                                                res.send(JSON.stringify({status: 'ok'}));
+                                                            }
+                                                        });
+                                                    } else {
+                                                        console.warn('Strange. User "' + req.query.user + '" is new, but yet exists in the group.');
+                                                        res.send(JSON.stringify({status: 'ok'}));
+                                                    }
+                                                });
+                                            } else {
+                                                res.send(JSON.stringify({status: 'ok'}));
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
                 return;
             }
 
@@ -325,9 +431,18 @@ function initWebServer(settings) {
                 } else {
                     var text = buffer.toString();
                     text = text.replace(/%%REDIRECT%%/g, redirectLink);
-
                     res.contentType('text/html');
-                    res.send(text);
+
+                    // Fill the projects
+                    readProjects(req.user ? 'system.user.' + req.user : adapter.config.defaultUser, function (err, projects) {
+                        if (!err && projects) {
+                            text = text.replace(/%%PROJECTS%%/, JSON.stringify(projects));
+                            res.send(text);
+                        } else {
+                            text = text.replace(/%%PROJECTS%%/, err);
+                            res.send(text);
+                        }
+                    });
                 }
                 return;
             }

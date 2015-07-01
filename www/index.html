@@ -9,7 +9,7 @@
 <body>
 
 <table id="projects">
-    %%PROJECTS%%
+
 </table>
 
 <button id="login">Login</button>
@@ -39,7 +39,6 @@
     });
     $('#createNewOk').button().click(function () {
         $.ajax({
-            type: "POST",
             url: "create.html",
             data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
             success: function (result) {
@@ -65,6 +64,24 @@
         $('#createNew').show();
         $('#newUserDlg').hide();
     });
+    var projects = '%%PROJECTS%%';
+    try {
+        projects = JSON.parse(projects);
+    } catch (e) {
+        console.log(e);
+        projects = null;
+    }
+
+    if (projects && typeof projects == 'object') {
+        var text = '';
+        for (var p = 0; p < projects.length; p++) {
+            text += '<tr><td style="' + (!projects[p].readOnly ? 'font-weight: bold' : '') + '">' +
+            '<a href="/vis/' + (projects[p].readOnly ? 'index' : 'edit') + '.html?' + projects[p].name + '" target="_blank">' +
+            projects[p].name + '</a></td><td>' + projects[p].owner.substring('system.user.'.length) + '</td></tr>';
+        }
+        $('#projects').html(text);
+    }
+
 </script>
 </body>
 </html>

@@ -119,11 +119,22 @@
             var text = '<option value=""></option>';
             if (arr) {
                 for (var i = 0; i < arr.length; i++) {
-                    text += '<option value="' + arr[i]._id + '">' + arr[i]._id + '</option>';
+                    text += '<option value="' + arr[i]._id + '">' + arr[i]._id.substring('system.adapter.'.length) + '</option>';
                 }
             }
             $('#loginRedirect').html(text);
             $('#loginRedirect').val(settings.loginRedirect);
+        });
+
+        getGroups(function (err, arr) {
+            var text = '<option value=""></option>';
+            if (arr) {
+                for (var g in arr) {
+                    text += '<option value="' + arr[g]._id + '">' + arr[g]._id.substring('system.group.'.length) + '</option>';
+                }
+            }
+            $('#newUserGroup').html(text);
+            $('#newUserGroup').val(settings.newUserGroup);
         });
 
         $('#auth').change(function () {
@@ -180,6 +191,7 @@
         <tr><td><a href="https://github.com/ioBroker/ioBroker.simple-api/blob/master/README.md" class="translate" target="_blank">Internal 'Simple API':</a></td><td><input type="checkbox" class="value" id="simpleapi"/></td></tr>
         <tr class="defaultUser"><td class="translate">Run as:</td><td><select class="value" id="defaultUser" /></td></tr>
         <tr><td class="translate">Login Redirect:</td><td><select class="value" id="loginRedirect" /></td></tr>
+        <tr><td class="translate">New user's group:</td><td><select class="value" id="newUserGroup" /></td></tr>
     </table>
 
     <p class="translate">help_tip</p>

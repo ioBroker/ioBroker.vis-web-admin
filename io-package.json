@@ -11,11 +11,10 @@
         "mode":                     "daemon",
         "platform":                 "Javascript/Node.js",
         "loglevel":                 "info",
-        "icon":                     "web.png",
+        "icon":                     "vis-web-admin.png",
         "readme":                   "https://github.com/ioBroker/ioBroker.vis-web-admin/blob/master/README.md",
-        "enabled":                  true,
         "keywords":                 ["web", "server", "www", "express"],
-        "extIcon":                  "https://raw.githubusercontent.com/ioBroker/ioBroker.vis-web-admin/master/admin/web.png",
+        "extIcon":                  "https://raw.githubusercontent.com/ioBroker/ioBroker.vis-web-admin/master/admin/vis-web-admin.png",
         "type":                     "visualisation",
         "localLink":                "%protocol%://%ip%:%port%/index.html"
     },
@@ -29,7 +28,8 @@
         "simpleapi":                false,
         "defaultUser":              "admin",
         "ttl":                      3600,
-        "loginRedirect":            ""
+        "loginRedirect":            "",
+        "newUserGroup":             ""
     },
     "objects": [
         {
