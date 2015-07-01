@@ -1,0 +1,62 @@
+{
+  "name": "iobroker.vis-web-admin",
+  "version": "0.1.0",
+  "description": "ioBroker simple vis-web-admin Adapter",
+  "author": {
+    "name": "bluefox",
+    "email": "bluefox@ccu.io"
+  },
+  "homepage": "https://github.com/ioBroker/ioBroker.vis-web-admin",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/ioBroker/ioBroker.vis-web-admin/blob/master/LICENSE"
+    }
+  ],
+  "keywords": [
+    "ioBroker",
+    "vis-web-admin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ioBroker/ioBroker.vis-web-admin"
+  },
+  "dependencies": {
+    "express": "~4.4.4",
+    "cookie-parser": "~1.3.2",
+    "body-parser": "~1.5.2",
+    "express-session": "~1.7.2",
+    "passport-local": "~1.0.0",
+    "passport": "~0.2.0",
+    "request": "~2.38.0",
+    "connect-flash": "~0.1.1",
+    "xtend": "~4.0.0",
+    "iobroker.socketio": ">=0.4.0",
+    "iobroker.simple-api": ">=0.1.0"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.4",
+    "grunt-replace": "~0.7.6",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-jscs": "~0.6.1",
+    "grunt-http": "~1.4.1",
+    "grunt-contrib-clean": "~0.5.0",
+    "grunt-contrib-compress": "~0.8.0",
+    "grunt-contrib-copy": "~0.5.0",
+    "grunt-exec": "~0.4.5"
+  },
+  "bugs": {
+    "url": "https://github.com/ioBroker/ioBroker.vis-web-admin/issues"
+  },
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT",
+  "maintainers": [
+    {
+      "name": "bluefox",
+      "email": "dogafox@gmail.com"
+    }
+  ]
+}

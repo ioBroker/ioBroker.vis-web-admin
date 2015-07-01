@@ -1,0 +1,70 @@
+<html>
+<head>
+    <link type="text/css" rel="stylesheet" href="/lib/css/themes/jquery-ui/redmond/jquery-ui.min.css">
+
+    <script src="/lib/js/jquery-1.11.1.min.js"></script>
+    <script src="/lib/js/jquery-ui-1.11.3.full.min.js"></script>
+
+</head>
+<body>
+
+<table id="projects">
+    %%PROJECTS%%
+</table>
+
+<button id="login">Login</button>
+<button id="createNew">Create new account</button>
+
+<div id="newUserDlg" style="display:none;">
+    <table>
+        <tr><td>User:</td><td><input id="user"/></td></tr>
+        <tr><td>Password:</td><td><input id="password" type="password"/></td></tr>
+        <tr><td>Password repeat:</td><td><input id="passwordRepeat" type="password"/></td></tr>
+        <tr><td>Email:</td><td><input id="mail"/></td></tr>
+        <tr><td></td><td><button id="createNewOk">Ok</button><button id="createNewCancel">Cancel</button></td></tr>
+    </table>
+</div>
+
+<script>
+    $('#login').button().click(function () {
+        var redirect = '%%REDIRECT%%';
+        redirect = redirect.replace('redirect', location.hostname);
+        location.href = redirect;
+    });
+    $('#createNew').button().click(function () {
+        $('#projects').hide();
+        $('#login').hide();
+        $('#createNew').hide();
+        $('#newUserDlg').show();
+    });
+    $('#createNewOk').button().click(function () {
+        $.ajax({
+            type: "POST",
+            url: "create.html",
+            data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
+            success: function (result) {
+                if (result && result.status == 'ok') {
+                    window.alert('Everything is OK. Login now');
+                    var redirect = '%%REDIRECT%%';
+                    redirect = redirect.replace('redirect', location.hostname);
+                    location.href = redirect;
+                } else {
+                    window.alert('Error: ' + result ? result.error : '');
+                }
+                $('#projects').show();
+                $('#login').show();
+                $('#createNew').show();
+                $('#newUserDlg').hide();
+            },
+            dataType: 'json'
+        });
+    });
+    $('#createNewCancel').button().click(function () {
+        $('#projects').show();
+        $('#login').show();
+        $('#createNew').show();
+        $('#newUserDlg').hide();
+    });
+</script>
+</body>
+</html>

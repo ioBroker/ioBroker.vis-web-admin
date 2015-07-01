@@ -1,0 +1,49 @@
+{
+    "common": {
+        "name":                     "vis-web-admin",
+        "version":                  "0.1.0",
+        "title":                    "Special adapter for ioBroker to manage vis views",
+        "desc": {
+            "en":                   "Special adapter for ioBroker to manage vis views",
+            "de":                   "Special adapter for ioBroker to manage vis views",
+            "ru":                   "Special adapter for ioBroker to manage vis views"
+        },
+        "mode":                     "daemon",
+        "platform":                 "Javascript/Node.js",
+        "loglevel":                 "info",
+        "icon":                     "web.png",
+        "readme":                   "https://github.com/ioBroker/ioBroker.vis-web-admin/blob/master/README.md",
+        "enabled":                  true,
+        "keywords":                 ["web", "server", "www", "express"],
+        "extIcon":                  "https://raw.githubusercontent.com/ioBroker/ioBroker.vis-web-admin/master/admin/web.png",
+        "type":                     "visualisation",
+        "localLink":                "%protocol%://%ip%:%port%/index.html"
+    },
+    "native": {
+        "port":                     8080,
+        "auth":                     false,
+        "secure":                   true,
+        "bind":                     "0.0.0.0",
+        "cache":                    false,
+        "socketio":                 "",
+        "simpleapi":                false,
+        "defaultUser":              "admin",
+        "ttl":                      3600,
+        "loginRedirect":            ""
+    },
+    "objects": [
+        {
+            "_id": "connected",
+            "type": "info",
+            "common": {
+                "name": "Info about connected socket clients",
+                "type": "string",
+                "read":  true,
+                "write": false
+            }
+        }
+    ],
+    "instanceObjects": [
+
+    ]
+}
