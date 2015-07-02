@@ -302,10 +302,11 @@
                 name = name[0].toLocaleUpperCase() + name.substring(1);
             }
 
-            text += '<h2><a href="' + redirect + 'index.html?' + projects[p].name + '">' + name + '</a>';
-            text += '<a href="' + redirect + 'edit.html?' + projects[p].name + '"><b>&nbsp;(' + _('Edit') + ')</b></a></h2>';
+            text += '<h2><a href="vis/index.html?' + projects[p].name + '" target="_blank">' + name + '</a>';
+            text += '<a href="vis/edit.html?' + projects[p].name + '" target="_blank"><b>&nbsp;(' + _('Edit') + ')</b></a>';
+            text += '<button data-link="' + projects[p].name + '" class="edit" style="float: right;" class="translateT" title="Login and edit"></button></h2>';
             if (projects[p].image) {
-                text += '<div class="sample"><a href="' + redirect + 'index.html?' + projects[p].name + '"><img src="' + projects[p].image + '" width="300"></a></div>'
+                text += '<div class="sample"><a  target="_blank" href="vis/index.html?' + projects[p].name + '"><img src="' + projects[p].image + '" width="300"></a></div>'
             }
         }
         /*var text = '<tr class="ui-widget-header"><td></td><td>' + _('Name') + '</td><td>' + _('Description') + '</td><td>' + _('Creator') + '</td><td>' + _('Edit') + '</td></tr>';
@@ -332,7 +333,7 @@
             redirect = redirect.replace('redirect', location.hostname);
             var win = window.open(redirect, '_blank');
             win.focus();
-        });
+        }).css({width: 22, height: 22});
     }
     translateAll();
     $('#languages').val(systemLang).change( function () {
