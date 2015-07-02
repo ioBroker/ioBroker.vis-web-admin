@@ -131,8 +131,8 @@
 <body>
 
 <div style="position: absolute; right: 10px; top: 10px">
-    <button id="login">Login</button>
-    <button id="createNew">Create new account</button>
+    <button id="login" class="translateB">Login</button>
+    <button id="createNew" class="translateB">Create new account</button>
 </div>
 
 <div id="cont">
@@ -167,6 +167,43 @@
         <tr><td class="translate">Email:</td><td><input id="mail"/></td></tr>
     </table>
 </div>
+<script type="text/javascript">
+    systemLang = navigator.language || navigator.userLanguage;
+    if (systemLang != 'en' && systemLang != 'de' && systemLang != 'ru') {
+        systemLang = 'en';
+    }
+
+    // Translated words
+    systemDictionary = {
+        "Examples of ioBroker.vis designs": {
+            "en": "Examples of ioBroker.vis designs",
+            "de": "Beispiele von ioBroker.vis views",
+            "ru": "Примеры Dash UI"
+        },
+        "List of examples for ioBroker.vis": {
+            "en": "List of examples for ioBroker.vis",
+            "de": "Liste von Beispielen",
+            "ru": "Список примеров для Dash UI"
+        },
+        "Edit": {"en": "Edit", "de": "Editieren", "ru": "редактировать"},
+        "Language:": {"en": "Language:", "de": "Sprache:", "ru": "Язык:"},
+        "Description": {
+            "en": "Examplse of designs, created with ioBroker.vis. If you click <b>(Edit)</b>, it would be possible to change the views or just to look, how some specific widget is created.<br>\n" +
+            "The changes are stored in the browser cache and after the cache clearing all changes will be gone.",
+            "de": "Beispiele für ioBroker.vis. Beim klicken auf <b>(Editieren)</b> Fläche, kann man mit den Views spielen oder " +
+            "anschauen wie ein oder anderes Element aufgebaut ist. Die Änderungen werden aber nicht gespeichert.",
+            "ru": "Примеры дизайна Web-интерфейсов сделанных при помощи Dash UI.<br>\n" +
+            "При нажатии на ссылку <b>(редактировать)</b> можно опробовать режим изменения или посмотреть, как тот или иной элемент сделан.<br>\n" +
+            "Изменения сохраняются только в кэш-памяти браузера и после очистки кэша изменения исчезнут."
+        },
+        "User:":                {"en": "User:",             "de": "Anwender:", "ru": "Пользователь:"},
+        "Password:":            {"en": "Password:",         "de": "Kennwort:", "ru": "Пароль:"},
+        "Password repeat:":     {"en": "Password repeat:",  "de": "Kennwort-Widerholung:", "ru": "Подтверждение пароля:"},
+        "Email:":               {"en": "Email:",            "de": "Email:", "ru": "Email:"},
+        "Login":                {"en": "Login",             "de": "Login", "ru": "Login"},
+        "Create new account":   {"en": "Create new account", "de": "Neuer Anwender", "ru": "Создать пользователя"}
+    };
+</script>
 
 <script>
     $('#login').button({
@@ -184,7 +221,7 @@
             $('#newUserDlg').dialog({
                 autoOpen: false,
                 modal:    true,
-                width:    350,
+                width:    370,
                 title:    _('Create new account'),
                 buttons: [
                     {
@@ -223,10 +260,6 @@
                                     } else {
                                         window.alert('Error: ' + result ? result.error : '');
                                     }
-                                    $('#projects').show();
-                                    $('#login').show();
-                                    $('#createNew').show();
-                                    $('#newUserDlg').hide();
                                 },
                                 dataType: 'json'
                             });
@@ -270,7 +303,7 @@
             }
 
             text += '<h2><a href="' + redirect + 'index.html?' + projects[p].name + '">' + name + '</a>';
-            text += '<a href=""' + redirect + 'edit.html?' + projects[p].name + '""><b>' + _('&nbsp;(Edit)') + '</b></a></h2>';
+            text += '<a href="' + redirect + 'edit.html?' + projects[p].name + '"><b>&nbsp;(' + _('Edit') + ')</b></a></h2>';
             if (projects[p].image) {
                 text += '<div class="sample"><a href="' + redirect + 'index.html?' + projects[p].name + '"><img src="' + projects[p].image + '" width="300"></a></div>'
             }
@@ -301,43 +334,10 @@
             win.focus();
         });
     }
-
-</script>
-<script type="text/javascript">
-    var mainSettings = {language: navigator.language || navigator.userLanguage};
-    if (mainSettings.language != 'en' && mainSettings.language != 'de' && mainSettings.language != 'ru') {
-        mainSettings.language = 'en';
-    }
-
-    // Translated words
-    var langWords = {
-        "Examples of ioBroker.vis designs": {
-            "en": "Examples of ioBroker.vis designs",
-            "de": "Beispiele von ioBroker.vis views",
-            "ru": "Примеры Dash UI"
-        },
-        "List of examples for ioBroker.vis": {
-            "en": "List of examples for ioBroker.vis",
-            "de": "Liste von Beispielen",
-            "ru": "Список примеров для Dash UI"
-        },
-        "&nbsp;(Edit)": {"en": "&nbsp;(Edit)", "de": "&nbsp;(Editieren)", "ru": "&nbsp;(редактировать)"},
-        "Language:": {"en": "Language:", "de": "Sprache:", "ru": "Язык:"},
-        "Description": {
-            "en": "Examplse of designs, created with ioBroker.vis. If you click <b>(Edit)</b>, it would be possible to change the views or just to look, how some specific widget is created.<br>\n" +
-            "The changes are stored in the browser cache and after the cache clearing all changes will be gone.",
-            "de": "Beispiele für ioBroker.vis. Beim klicken auf <b>(Editieren)</b> Fläche, kann man mit den Views spielen oder " +
-            "anschauen wie ein oder anderes Element aufgebaut ist. Die Änderungen werden aber nicht gespeichert.",
-            "ru": "Примеры дизайна Web-интерфейсов сделанных при помощи Dash UI.<br>\n" +
-            "При нажатии на ссылку <b>(редактировать)</b> можно опробовать режим изменения или посмотреть, как тот или иной элемент сделан.<br>\n" +
-            "Изменения сохраняются только в кэш-памяти браузера и после очистки кэша изменения исчезнут."
-        }
-    };
-    
-    translateAll(mainSettings.language, langWords);
-    $('#languages').val(mainSettings.language).change( function () {
-        mainSettings.language = $(this).val();
-        translateAll(mainSettings.language, langWords);
+    translateAll();
+    $('#languages').val(systemLang).change( function () {
+        systemLang = $(this).val();
+        translateAll();
     });
 
 </script>
