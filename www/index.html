@@ -4,66 +4,247 @@
 
     <script src="/lib/js/jquery-1.11.1.min.js"></script>
     <script src="/lib/js/jquery-ui-1.11.3.full.min.js"></script>
+    <script src="/lib/js/translate.js"></script>
+    <style>
+        .even {
+            background: lightgrey;
+        }
+        .odd {
+            background: grey;
+        }
 
+
+        * {
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: #666;
+            font-family: 'Lucida Sans Unicode', Arial, sans-serif;
+            color: #333;
+            text-align: center;
+            padding: 50px 0
+        }
+
+        div, p, li {
+            font-size: 12px
+        }
+
+        li {
+            margin-left: 28px;
+        }
+
+        h1 {
+            color: #0061CA;
+            text-align: center;
+            padding-bottom: 10px
+        }
+
+        h2 {
+            color: #999;
+            font-size: 22px;
+            font-weight: normal
+        }
+
+        pre {
+            background: #666;
+            color: #fff;
+            padding: 10px;
+            margin: 10px;
+            height: auto;
+            overflow: auto;
+            font: 12px Verdana, Courier, sans-serif
+        }
+
+        * html pre {
+            width: 100%
+        }
+
+        .description {
+            padding: 16px;
+            margin: 10px 0;
+            background: #eee
+        }
+
+        .sample {
+            padding: 20px 30px;
+            margin: 4px 0 25px 0;
+            border: 1px solid #e1e1e1;
+            text-align: center;
+        }
+
+        h4.stitle {
+            color: #666;
+            margin: 0 0 5px 0
+        }
+
+        .links {
+            padding: 10px;
+            margin-top: 20px
+        }
+
+        .links a {
+            font-size: 14px;
+            color: #0080FF;
+            text-decoration: none
+        }
+        a {
+            text-decoration: none
+        }
+
+        .links a:hover {
+            font-weight: bold
+        }
+
+        #cont {
+            width: 550px;
+            margin: 0 auto;
+            background: #fff;
+            text-align: left;
+            padding: 20px
+        }
+
+        .buttons {
+            padding: 5px;
+        }
+
+        .buttons span {
+            color: #0080FF;
+            padding: 0 5px;
+            cursor: pointer;
+            font: 10px Verdana
+        }
+
+        .buttons span.active, .buttons span:hover {
+            background: #0080FF;
+            color: #fff
+        }
+        .language {
+            position: absolute;
+            top: 15px;
+            right: 300px;
+        }
+
+    </style>
 </head>
 <body>
 
-<table id="projects">
+<div style="position: absolute; right: 10px; top: 10px">
+    <button id="login">Login</button>
+    <button id="createNew">Create new account</button>
+</div>
 
-</table>
+<div id="cont">
+    <h1 class="translate">Examples of ioBroker.vis designs</h1>
+    <div class="description">
+        <p class="translate">Description</p>
+        <br>
+        <!--p><b><a href="#manual" class="translate" data-lang="Here">Hier</a></b> <span class="translate" data-lang="you can find manual: how to create demo-views.">kann man die Anleitung für Demo-Views finden.</span>
+        </p-->
+    </div>
 
-<button id="login">Login</button>
-<button id="createNew">Create new account</button>
+    <div id="projects" cellspacing="0">
+
+    </div>
+</div>
+
+<div class="language">
+    <label for="languages" class="translate" style="color: lightgray">Language:</label>
+    <select id="languages">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="ru">Русский</option>
+    </select>
+</div>
+
 
 <div id="newUserDlg" style="display:none;">
     <table>
-        <tr><td>User:</td><td><input id="user"/></td></tr>
-        <tr><td>Password:</td><td><input id="password" type="password"/></td></tr>
-        <tr><td>Password repeat:</td><td><input id="passwordRepeat" type="password"/></td></tr>
-        <tr><td>Email:</td><td><input id="mail"/></td></tr>
-        <tr><td></td><td><button id="createNewOk">Ok</button><button id="createNewCancel">Cancel</button></td></tr>
+        <tr><td class="translate">User:</td><td><input id="user"/></td></tr>
+        <tr><td class="translate">Password:</td><td><input id="password" type="password"/></td></tr>
+        <tr><td class="translate">Password repeat:</td><td><input id="passwordRepeat" type="password"/></td></tr>
+        <tr><td class="translate">Email:</td><td><input id="mail"/></td></tr>
     </table>
 </div>
 
 <script>
-    $('#login').button().click(function () {
+    $('#login').button({
+        icons: {primary: 'ui-icon-play'}
+    }).click(function () {
         var redirect = '%%REDIRECT%%';
         redirect = redirect.replace('redirect', location.hostname);
         location.href = redirect;
     });
-    $('#createNew').button().click(function () {
-        $('#projects').hide();
-        $('#login').hide();
-        $('#createNew').hide();
-        $('#newUserDlg').show();
+    $('#createNew').button({
+        icons: {primary: 'ui-icon-clipboard'}
+    }).click(function () {
+        if (!$('#newUserDlg').data('inited')) {
+            $('#newUserDlg').data('inited', true);
+            $('#newUserDlg').dialog({
+                autoOpen: false,
+                modal:    true,
+                width:    350,
+                title:    _('Create new account'),
+                buttons: [
+                    {
+                        text: _('Ok'),
+                        click: function () {
+                            if (!$('#password').val()) {
+                                alert('Empty password is not allowed');
+                                return;
+                            }
+                            if ($('#password').val() != $('#passwordRepeat').val()) {
+                                alert('Repeat password is not equal!');
+                                return;
+                            }
+                            if (!$('#user').val()) {
+                                alert('Empty user name is not allowed!');
+                                return;
+                            }
+                            if ($('#user').val().match(/\s/)) {
+                                alert('Spaces are not allowed in the user name!');
+                                return;
+                            }
+                            if ($('#user').val().match(/\./)) {
+                                alert('Dots are not allowed in the user name!');
+                                return;
+                            }
+
+                            $.ajax({
+                                url: "create.html",
+                                data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
+                                success: function (result) {
+                                    if (result && result.status == 'ok') {
+                                        window.alert('Everything is OK. Login now');
+                                        var redirect = '%%REDIRECT%%';
+                                        redirect = redirect.replace('redirect', location.hostname);
+                                        location.href = redirect;
+                                    } else {
+                                        window.alert('Error: ' + result ? result.error : '');
+                                    }
+                                    $('#projects').show();
+                                    $('#login').show();
+                                    $('#createNew').show();
+                                    $('#newUserDlg').hide();
+                                },
+                                dataType: 'json'
+                            });
+                        }
+                    },
+                    {
+                        text: _('Cancel'),
+                        click: function () {
+                            $(this).dialog('close');
+                        }
+                    }
+
+                ]
+            });
+        }
+        $('#newUserDlg').dialog('open');
     });
-    $('#createNewOk').button().click(function () {
-        $.ajax({
-            url: "create.html",
-            data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
-            success: function (result) {
-                if (result && result.status == 'ok') {
-                    window.alert('Everything is OK. Login now');
-                    var redirect = '%%REDIRECT%%';
-                    redirect = redirect.replace('redirect', location.hostname);
-                    location.href = redirect;
-                } else {
-                    window.alert('Error: ' + result ? result.error : '');
-                }
-                $('#projects').show();
-                $('#login').show();
-                $('#createNew').show();
-                $('#newUserDlg').hide();
-            },
-            dataType: 'json'
-        });
-    });
-    $('#createNewCancel').button().click(function () {
-        $('#projects').show();
-        $('#login').show();
-        $('#createNew').show();
-        $('#newUserDlg').hide();
-    });
+
     var projects = '%%PROJECTS%%';
     try {
         projects = JSON.parse(projects);
@@ -73,14 +254,91 @@
     }
 
     if (projects && typeof projects == 'object') {
+        var redirect = '%%REDIRECT%%';
+        redirect = redirect.replace('redirect', location.hostname);
         var text = '';
         for (var p = 0; p < projects.length; p++) {
-            text += '<tr><td style="' + (!projects[p].readOnly ? 'font-weight: bold' : '') + '">' +
-            '<a href="/vis/' + (projects[p].readOnly ? 'index' : 'edit') + '.html?' + projects[p].name + '" target="_blank">' +
-            projects[p].name + '</a></td><td>' + projects[p].owner.substring('system.user.'.length) + '</td></tr>';
+            var name = projects[p].image || projects[p].name;
+            if (projects[p].image) {
+                var parts = name.split('/');
+                name = parts.pop();
+                parts = name.split('.');
+                parts.pop();
+                name = parts.join('.');
+                name = name.replace(/_/g, ' ');
+                name = name[0].toLocaleUpperCase() + name.substring(1);
+            }
+
+            text += '<h2><a href="' + redirect + 'index.html?' + projects[p].name + '">' + name + '</a>';
+            text += '<a href=""' + redirect + 'edit.html?' + projects[p].name + '""><b>' + _('&nbsp;(Edit)') + '</b></a></h2>';
+            if (projects[p].image) {
+                text += '<div class="sample"><a href="' + redirect + 'index.html?' + projects[p].name + '"><img src="' + projects[p].image + '" width="300"></a></div>'
+            }
         }
+        /*var text = '<tr class="ui-widget-header"><td></td><td>' + _('Name') + '</td><td>' + _('Description') + '</td><td>' + _('Creator') + '</td><td>' + _('Edit') + '</td></tr>';
+        for (var p = 0; p < projects.length; p++) {
+            text += '<tr class="' + ((p % 2) ? 'even' : 'odd') + '">';
+            if (projects[p].image) {
+                text += '<td><a href="/vis/index.html?' + projects[p].name + '" target="_blank"><img src="' + projects[p].image + '" width="300" height="150"/></a></td>';
+            } else {
+                text += '<td></td>';
+            }
+            text += '<td><a href="/vis/index.html?' + projects[p].name + '" target="_blank">' + projects[p].name + '</a></td>';
+            text += '<td>' + (projects[p].description || '') + '</td>';
+            text += '<td>' + projects[p].owner.substring('system.user.'.length) + '</td>';
+            text += '<td><button data-link="' + projects[p].name + '" class="edit"></button></td>';
+            text += '</tr>';
+        }*/
         $('#projects').html(text);
+
+        $('.edit').button({
+            icons: {primary: 'ui-icon-gear'},
+            text:  false
+        }).click(function () {
+            var redirect = '%%REDIRECT%%' + 'edit.html?' + $(this).data('link');
+            redirect = redirect.replace('redirect', location.hostname);
+            var win = window.open(redirect, '_blank');
+            win.focus();
+        });
     }
+
+</script>
+<script type="text/javascript">
+    var mainSettings = {language: navigator.language || navigator.userLanguage};
+    if (mainSettings.language != 'en' && mainSettings.language != 'de' && mainSettings.language != 'ru') {
+        mainSettings.language = 'en';
+    }
+
+    // Translated words
+    var langWords = {
+        "Examples of ioBroker.vis designs": {
+            "en": "Examples of ioBroker.vis designs",
+            "de": "Beispiele von ioBroker.vis views",
+            "ru": "Примеры Dash UI"
+        },
+        "List of examples for ioBroker.vis": {
+            "en": "List of examples for ioBroker.vis",
+            "de": "Liste von Beispielen",
+            "ru": "Список примеров для Dash UI"
+        },
+        "&nbsp;(Edit)": {"en": "&nbsp;(Edit)", "de": "&nbsp;(Editieren)", "ru": "&nbsp;(редактировать)"},
+        "Language:": {"en": "Language:", "de": "Sprache:", "ru": "Язык:"},
+        "Description": {
+            "en": "Examplse of designs, created with ioBroker.vis. If you click <b>(Edit)</b>, it would be possible to change the views or just to look, how some specific widget is created.<br>\n" +
+            "The changes are stored in the browser cache and after the cache clearing all changes will be gone.",
+            "de": "Beispiele für ioBroker.vis. Beim klicken auf <b>(Editieren)</b> Fläche, kann man mit den Views spielen oder " +
+            "anschauen wie ein oder anderes Element aufgebaut ist. Die Änderungen werden aber nicht gespeichert.",
+            "ru": "Примеры дизайна Web-интерфейсов сделанных при помощи Dash UI.<br>\n" +
+            "При нажатии на ссылку <b>(редактировать)</b> можно опробовать режим изменения или посмотреть, как тот или иной элемент сделан.<br>\n" +
+            "Изменения сохраняются только в кэш-памяти браузера и после очистки кэша изменения исчезнут."
+        }
+    };
+    
+    translateAll(mainSettings.language, langWords);
+    $('#languages').val(mainSettings.language).change( function () {
+        mainSettings.language = $(this).val();
+        translateAll(mainSettings.language, langWords);
+    });
 
 </script>
 </body>

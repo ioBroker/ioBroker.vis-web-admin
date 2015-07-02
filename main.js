@@ -154,12 +154,20 @@ function addUser(user, pw, options, callback) {
 function _detectViews(projectDir, user, callback) {
     adapter.readDir(adapter.config.vis, '/' + projectDir, {user: user, filter: true}, function (err, dirs) {
         // find vis-views.json
+        var result = null;
         for (var f = 0; f < dirs.length; f++) {
             if (dirs[f].file == 'vis-views.json' && (!dirs[f].acl || dirs[f].acl.read)) {
-                return callback(err, {name: projectDir, readOnly: dirs[f].acl && !dirs[f].acl.write, owner: (dirs[f].acl ? dirs[f].acl.owner : '')});
+                result = result || {};
+                result.name = projectDir;
+                result.readOnly = dirs[f].acl && !dirs[f].acl.write;
+                result.owner = (dirs[f].acl ? dirs[f].acl.owner : '');
+            }
+            if (dirs[f].file.match(/\.png$/i) || dirs[f].file.match(/\.jpg$/i) || dirs[f].file.match(/\.gif$/i)) {
+                result = result || {};
+                result.image = '/vis.0/' + projectDir + '/' + dirs[f].file;
             }
         }
-        callback(err);
+        callback(err, result);
     });
 }
 
