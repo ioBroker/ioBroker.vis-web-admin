@@ -431,6 +431,17 @@ function initWebServer(settings) {
                 return;
             }
 
+            if (id == 'favicon.png' && !url) {
+                var buffer = fs.readFileSync(__dirname + '/www/favicon.png');
+                if (buffer === null || buffer === undefined) {
+                    res.contentType('text/html');
+                    res.send('File ' + url + ' not found', 404);
+                } else {
+                    res.send(buffer);
+                }
+                return;
+            }
+
             if (id == 'index.html' && !url) {
                 var buffer = fs.readFileSync(__dirname + '/www/index.html');
                 if (buffer === null || buffer === undefined) {
