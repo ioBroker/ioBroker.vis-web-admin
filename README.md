@@ -6,6 +6,9 @@ Special adapter for iobroker.net
 
 ## Changelog
 
+### 0.1.2 (2015-10-10)
+* (bluefox) update packets
+
 ### 0.1.1 (2015-07-01)
 * (bluefox) better layout
 

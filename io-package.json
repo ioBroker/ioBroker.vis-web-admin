@@ -1,7 +1,7 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "0.1.1",
+        "version":                  "0.1.2",
         "title":                    "Special adapter for ioBroker to manage vis views",
         "desc": {
             "en":                   "Special adapter for ioBroker to manage vis views",
@@ -16,7 +16,8 @@
         "keywords":                 ["web", "server", "www", "express"],
         "extIcon":                  "https://raw.githubusercontent.com/ioBroker/ioBroker.vis-web-admin/master/admin/vis-web-admin.png",
         "type":                     "visualisation",
-        "localLink":                "%protocol%://%ip%:%port%/index.html"
+        "localLink":                "%protocol%://%ip%:%port%/index.html",
+		"stopBeforeUpdate":         true
     },
     "native": {
         "port":                     8080,
