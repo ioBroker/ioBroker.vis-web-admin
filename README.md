@@ -6,6 +6,9 @@ Special adapter for iobroker.net
 
 ## Changelog
 
+### 1.0.1 (2015-11-06)
+* (bluefox) make compatible with npm 3.x
+
 ### 1.0.0 (2015-11-05)
 * (bluefox) update jqueryUI
 
