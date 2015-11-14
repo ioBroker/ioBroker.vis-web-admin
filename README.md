@@ -6,6 +6,9 @@ Special adapter for iobroker.net
 
 ## Changelog
 
+### 1.0.3 (2015-11-14)
+* (bluefox) suport of multi history
+
 ### 1.0.2 (2015-11-10)
 * (bluefox) fix error with default user
 
