@@ -5,8 +5,10 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.1.1 (2015-12-14)
+* (bluefox) add missing themes
 
-### 1.1.0 (2015-11-14)
+### 1.1.0 (2015-12-14)
 * (bluefox) update socketio
 
 ### 1.0.3 (2015-11-14)
