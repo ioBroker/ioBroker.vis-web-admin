@@ -1,10 +1,13 @@
 ![Logo](admin/vis-web-admin.png)
-
+===========================
 # ioBroker.vis-web-admin
 
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.2.0 (2016-06-19)
+* (bluefox) update socketio
+
 ### 1.1.1 (2015-12-14)
 * (bluefox) add missing themes
 

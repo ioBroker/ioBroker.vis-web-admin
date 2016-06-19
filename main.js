@@ -4,7 +4,7 @@
 
 var express = require('express');
 var fs =      require('fs');
-var Stream =  require('stream');
+//var Stream =  require('stream');
 var utils =   require(__dirname + '/lib/utils'); // Get common adapter utils
 
 var session;// =           require('express-session');
@@ -33,7 +33,7 @@ var adapter = utils.adapter({
         if (typeof callback === 'function') callback();
     },
     objectChange: function (id, obj) {
-        if (!ownSocket && id == adapter.config.socketio) {
+        if (!ownSocket && id === adapter.config.socketio) {
             if (obj && obj.common && obj.common.enabled && obj.native) {
                 socketUrl = ':' + obj.native.port;
             } else {
@@ -42,15 +42,18 @@ var adapter = utils.adapter({
         }
         if (webServer.io) webServer.io.publishAll('objectChange', id, obj);
         if (webServer.api && adapter.config.auth) webServer.api.objectChange(id, obj);
+        if (id === 'system.config') {
+            lang = obj && obj.common && obj.common.language ? obj.common.language : 'en';
+        }
     },
     stateChange: function (id, state) {
         if (webServer.io) webServer.io.publishAll('stateChange', id, state);
     },
     unload: function (callback) {
         try {
-            adapter.log.info("terminating http" + (webServer.settings.secure ? "s" : "") + " server on port " + webServer.settings.port);
+            adapter.log.info('terminating http' + (webServer.settings.secure ? 's' : '') + ' server on port ' + webServer.settings.port);
             webServer.server.close();
-            adapter.log.info("terminated http" + (webServer.settings.secure ? "s" : "") + " server on port " + webServer.settings.port);
+            adapter.log.info('terminated http' + (webServer.settings.secure ? 's' : '') + ' server on port ' + webServer.settings.port);
 
             callback();
         } catch (e) {
@@ -208,6 +211,7 @@ function initWebServer(settings) {
         io:        null,
         settings:  settings
     };
+    adapter.subscribeForeignObjects('system.config');
 
     adapter.config.defaultUser = adapter.config.defaultUser || 'system.user.admin';
     if (!adapter.config.defaultUser.match(/^system\.user\./)) adapter.config.defaultUser = 'system.user.' + adapter.config.defaultUser;
@@ -269,9 +273,15 @@ function initWebServer(settings) {
 
             server.app.post('/login', function (req, res) {
                 var redirect = '/';
+                var parts;
                 if (req.body.origin) {
-                    var parts = req.body.origin.split('=');
+                    parts = req.body.origin.split('=');
                     if (parts[1]) redirect = decodeURIComponent(parts[1]);
+                }
+                if (req.body && req.body.username && adapter.config.addUserName && redirect.indexOf('?') == -1) {
+                    parts = redirect.split('#');
+                    parts[0] += '?' + req.body.username;
+                    redirect = parts.join('#');
                 }
                 var authenticate = passport.authenticate('local', {
                     successRedirect: redirect,
@@ -309,7 +319,7 @@ function initWebServer(settings) {
                 adapter.getBinaryState(fileName[0], {user: req.user ? 'system.user.' + req.user : adapter.config.defaultUser}, function (err, obj) {
                     if (!err && obj !== null && obj !== undefined) {
                         res.set('Content-Type', 'text/plain');
-                        res.send(obj);
+                        res.status(200).send(obj);
                     } else {
                         res.status(404).send('404 Not found. File ' + fileName[0] + ' not found');
                     }
@@ -321,7 +331,7 @@ function initWebServer(settings) {
 
         server.app.get('*/_socket/info.js', function (req, res) {
             res.set('Content-Type', 'application/javascript');
-            res.send('var socketUrl = "' + socketUrl + '"; var socketSession = "' + '' + '"; sysLang="' + lang + '";');
+            res.status(200).send('var socketUrl = "' + socketUrl + '"; var socketSession = "' + '' + '"; sysLang="' + lang + '";');
         });
 
         // Enable CORS
@@ -333,7 +343,7 @@ function initWebServer(settings) {
 
                 // intercept OPTIONS method
                 if ('OPTIONS' == req.method) {
-                    res.send(200);
+                    res.status(200).send(200);
                 } else {
                     next();
                 }
@@ -371,11 +381,12 @@ function initWebServer(settings) {
             var id = url.shift();
             url = url.join('/');
             var pos = url.indexOf('?');
+            var noFileCache;
             if (pos != -1) {
                 url = url.substring(0, pos);
+                // disable file cache if request like /vis/files/picture.png?noCache
+                noFileCache = true;
             }
-
-            // If create new user
             if (id.match(/^create\.html/) && !url) {
                 res.contentType('application/javascript');
                 console.log(JSON.stringify(req.query));
@@ -432,7 +443,7 @@ function initWebServer(settings) {
                 return;
             }
 
-            if (id == 'favicon.png' && !url) {
+            if (id === 'favicon.png' && !url) {
                 var buffer = fs.readFileSync(__dirname + '/www/favicon.png');
                 if (buffer === null || buffer === undefined) {
                     res.contentType('text/html');
@@ -467,36 +478,36 @@ function initWebServer(settings) {
                 return;
             }
 
-            if (settings.cache && cache[id + '/' + url]) {
+            if (settings.cache && cache[id + '/' + url] && !noFileCache) {
                 res.contentType(cache[id + '/' + url].mimeType);
-                res.send(cache[id + '/' + url].buffer);
+                res.status(200).send(cache[id + '/' + url].buffer);
             } else {
-                if (id == 'login' && url == 'index.html') {
+                if (id === 'login' && url === 'index.html') {
                     var buffer = fs.readFileSync(__dirname + '/www/login/index.html');
                     if (buffer === null || buffer === undefined) {
                         res.contentType('text/html');
-                        res.send('File ' + url + ' not found', 404);
+                        res.status(200).send('File ' + url + ' not found', 404);
                     } else {
                         // Store file in cache
                         if (settings.cache) {
                             cache[id + '/' + url] = {buffer: buffer.toString(), mimeType: 'text/html'};
                         }
                         res.contentType('text/html');
-                        res.send(buffer.toString());
+                        res.status(200).send(buffer.toString());
                     }
 
                 } else {
-                    adapter.readFile(id, url, {user: req.user ? 'system.user.' + req.user : adapter.config.defaultUser}, function (err, buffer, mimeType) {
+                    adapter.readFile(id, url, {user: req.user ? 'system.user.' + req.user : adapter.config.defaultUser, noFileCache: noFileCache}, function (err, buffer, mimeType) {
                         if (buffer === null || buffer === undefined || err) {
                             res.contentType('text/html');
-                            res.send('File ' + url + ' not found', 404);
+                            res.status(404).send('File ' + url + ' not found: ' + err);
                         } else {
                             // Store file in cache
                             if (settings.cache) {
                                 cache[id + '/' + url] = {buffer: buffer, mimeType: mimeType || 'text/javascript'};
                             }
                             res.contentType(mimeType || 'text/javascript');
-                            res.send(buffer);
+                            res.status(200).send(buffer);
                         }
                     });
                 }
@@ -527,7 +538,7 @@ function initWebServer(settings) {
 
     // Activate integrated simple API
     if (settings.simpleapi) {
-        var SimpleAPI = require('iobroker.simple-api/lib/simpleapi.js');
+        var SimpleAPI = require(utils.appName + '.simple-api/lib/simpleapi.js');
 
         // Subscribe on user changes to manage the permissions cache
         adapter.subscribeForeignObjects('system.group.*');
@@ -538,14 +549,14 @@ function initWebServer(settings) {
 
     // Activate integrated socket
     if (ownSocket) {
-        var IOBrokerSocket = require('iobroker.socketio/lib/iobrokersocket.js');
+        var IOSocket = require(utils.appName + '.socketio/lib/socket.js');
         var socketSettings = JSON.parse(JSON.stringify(settings));
         // Authentication checked by server itself
         socketSettings.auth        = false;
         socketSettings.secret      = secret;
         socketSettings.store       = store;
         socketSettings.ttl         = adapter.config.ttl || 3600;
-        server.io = new IOBrokerSocket(server.server, socketSettings, adapter);
+        server.io = new IOSocket(server.server, socketSettings, adapter);
     }
 
     if (server.server) {
