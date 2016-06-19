@@ -1,10 +1,15 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "1.2.0",
+        "version":                  "1.2.1",
         "title":                    "Special adapter for ioBroker to manage vis views",
 		"news": {
         	"1.2.0": {
+				"en":                   "bind socket to specified IP",
+				"de":                   "bind socket to specified IP",
+				"ru":                   "bind socket to specified IP"
+			},
+			"1.2.0": {
 				"en":                   "update socketio",
 				"de":                   "update socketio",
 				"ru":                   "update socketio"

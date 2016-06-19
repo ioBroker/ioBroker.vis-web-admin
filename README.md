@@ -5,6 +5,9 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.2.1 (2016-06-19)
+* (bluefox) bind socket to specified IP
+
 ### 1.2.0 (2016-06-19)
 * (bluefox) update socketio
 

@@ -120,7 +120,7 @@ function main() {
                 !adapter.config.certPrivate ||
                 !obj.native.certificates[adapter.config.certPublic] ||
                 !obj.native.certificates[adapter.config.certPrivate]
-                ) {
+            ) {
                 adapter.log.error('Cannot enable secure web server, because no certificates found: ' + adapter.config.certPublic + ', ' + adapter.config.certPrivate);
             } else {
                 adapter.config.certificates = {
@@ -531,7 +531,7 @@ function initWebServer(settings) {
                 adapter.log.error('port ' + settings.port + ' already in use');
                 process.exit(1);
             }
-            server.server.listen(port);
+            server.server.listen(port, (!settings.bind || settings.bind === '0.0.0.0') ? undefined : settings.bind || undefined);
             adapter.log.info('http' + (settings.secure ? 's' : '') + ' server listening on port ' + port);
         });
     }
