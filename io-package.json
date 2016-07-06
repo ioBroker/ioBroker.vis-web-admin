@@ -1,18 +1,23 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "1.2.1",
+        "version":                  "1.2.2",
         "title":                    "Special adapter for ioBroker to manage vis views",
 		"news": {
-        	"1.2.0": {
-				"en":                   "bind socket to specified IP",
-				"de":                   "bind socket to specified IP",
-				"ru":                   "bind socket to specified IP"
+            "1.2.": {
+                "en":               "support of chained certificates",
+                "de":               "support of chained certificates",
+                "ru":               "support of chained certificate"
+            },
+        	"1.2.1": {
+				"en":               "bind socket to specified IP",
+				"de":               "bind socket to specified IP",
+				"ru":               "bind socket to specified IP"
 			},
 			"1.2.0": {
-				"en":                   "update socketio",
-				"de":                   "update socketio",
-				"ru":                   "update socketio"
+				"en":               "update socketio",
+				"de":               "update socketio",
+				"ru":               "update socketio"
 			}
         },
         "desc": {
@@ -30,7 +35,7 @@
         "type":                     "visualisation",
         "localLink":                "%protocol%://%ip%:%port%/index.html",
 	"stopBeforeUpdate":         true,
-        "dependencies":             [{"js-controller": ">=0.9.0"}]
+        "dependencies":             [{"js-controller": ">=0.10.1"}]
     },
     "native": {
         "port":                     8080,
@@ -43,6 +48,9 @@
         "defaultUser":              "admin",
         "ttl":                      3600,
         "loginRedirect":            "",
+        "certPublic":               "",
+        "certPrivate":              "",
+        "certChained":              "",
         "newUserGroup":             ""
     },
     "objects": [

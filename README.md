@@ -5,6 +5,9 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.2.2 (2016-07-06)
+* (bluefox) support of chained certificates
+
 ### 1.2.1 (2016-06-19)
 * (bluefox) bind socket to specified IP
 

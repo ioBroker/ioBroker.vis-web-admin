@@ -113,21 +113,8 @@ var adapter = utils.adapter({
 function main() {
     if (adapter.config.secure) {
         // Load certificates
-        adapter.getForeignObject('system.certificates', function (err, obj) {
-            if (err || !obj ||
-                !obj.native.certificates ||
-                !adapter.config.certPublic ||
-                !adapter.config.certPrivate ||
-                !obj.native.certificates[adapter.config.certPublic] ||
-                !obj.native.certificates[adapter.config.certPrivate]
-            ) {
-                adapter.log.error('Cannot enable secure web server, because no certificates found: ' + adapter.config.certPublic + ', ' + adapter.config.certPrivate);
-            } else {
-                adapter.config.certificates = {
-                    key:  obj.native.certificates[adapter.config.certPrivate],
-                    cert: obj.native.certificates[adapter.config.certPublic]
-                };
-            }
+        adapter.getCertificates(function (err, certificates) {
+            adapter.config.certificates = certificates;
             webServer = initWebServer(adapter.config);
         });
     } else {
@@ -136,9 +123,9 @@ function main() {
 }
 
 function addUser(user, pw, options, callback) {
-    adapter.getForeignObject("system.user." + user, options, function (err, obj) {
+    adapter.getForeignObject('system.user.' + user, options, function (err, obj) {
         if (obj) {
-            if (typeof callback == 'function') callback("User yet exists");
+            if (typeof callback == 'function') callback('User yet exists');
         } else {
             adapter.setForeignObject('system.user.' + user, {
                 type: 'user',
@@ -159,7 +146,7 @@ function _detectViews(projectDir, user, callback) {
         // find vis-views.json
         var result = null;
         for (var f = 0; f < dirs.length; f++) {
-            if (dirs[f].file == 'vis-views.json' && (!dirs[f].acl || dirs[f].acl.read)) {
+            if (dirs[f].file === 'vis-views.json' && (!dirs[f].acl || dirs[f].acl.read)) {
                 result = result || {};
                 result.name = projectDir;
                 result.readOnly = dirs[f].acl && !dirs[f].acl.write;
