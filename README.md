@@ -5,6 +5,10 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.2.3 (2016-07-18)
+* (bluefox) fix error with early logout
+* (bluefox) update passport.socketio
+
 ### 1.2.2 (2016-07-06)
 * (bluefox) support of chained certificates
 

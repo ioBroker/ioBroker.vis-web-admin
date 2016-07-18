@@ -1,10 +1,15 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "1.2.2",
+        "version":                  "1.2.3",
         "title":                    "Special adapter for ioBroker to manage vis views",
 		"news": {
-            "1.2.": {
+			"1.2.3": {
+                "en":               "fix error with early logout\nupdate passport.socketio",
+                "de":               "fix error with early logout\nupdate passport.socketio",
+                "ru":               "fix error with early logout\nupdate passport.socketio"
+            },
+            "1.2.2": {
                 "en":               "support of chained certificates",
                 "de":               "support of chained certificates",
                 "ru":               "support of chained certificate"

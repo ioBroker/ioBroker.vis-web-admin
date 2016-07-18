@@ -25,6 +25,7 @@
         "integrated":       {"de": "integriert",              "ru": "встроенный"},
         "Public certificate:":    {"en": "Public certificate:",     "de": "Publikzertifikat:",       "ru": "'Public' сертификат:"},
         "Private certificate:":   {"en": "Private certificate:",    "de": "Privatzertifikat:",       "ru": "'Private' сертификат:"},
+        "Chained certificate:":   {"en": "Chained certificate:",    "de": "Kettenzertifikat:",       "ru": "'Chained' сертификат:"},
         "Internal 'Simple API':":   {"en": "Build-in 'Simple-API'",    "de": "Eingebautes 'Simple-API':",       "ru": "Встроенный 'Simple-API':"},
         "Listen on all IPs": {"en": "Listen on all IPs",       "de": "Alle IPs zulassen",            "ru": "Открыть для всех IP адресов"},
 
@@ -68,8 +69,10 @@
             $('#secure').prop('checked', true);
             $('#defaultUser').val('admin');
             $('.defaultUser').hide();
+            $('#_ttl').show();
         } else {
             $('.defaultUser').show();
+            $('#_ttl').hide();
         }
     }
 
@@ -200,6 +203,7 @@
             <td><select id="certChained" class="value"></select></td>
         </tr>
         <tr><td class="translate">Authentication:</td><td><input  class="value" id="auth"   type="checkbox" /></td><td></td></tr>
+        <tr id="_ttl"><td class="translate">Login timeout(sec):</td><td><input  class="value" id="ttl"/></td><td></td></tr>
         <tr><td class="translate">Cache:</td><td>         <input  class="value" id="cache"  type="checkbox" /></td><td></td></tr>
         <tr><td class="translate">Socket.IO Instance (Optional):</td><td><select class="value" id="socketio"></select><span class="translate" style="padding-left: 20">socket_help</span></td></tr>
         <tr><td><a href="https://github.com/ioBroker/ioBroker.simple-api/blob/master/README.md" class="translate" target="_blank">Internal 'Simple API':</a></td><td><input type="checkbox" class="value" id="simpleapi"/></td></tr>
