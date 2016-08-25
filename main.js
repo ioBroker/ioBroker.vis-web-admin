@@ -28,11 +28,11 @@ var lang =       'en';
 
 var redirectLink = '';
 var systemDictionary = {
-    'Directories': {'en': 'Directories', 'de': 'Verzeichnise', 'ru': 'Пути'},
+    'Directories': {'en': 'Directories', 'de': 'Verzeichnise', 'ru': 'пїЅпїЅпїЅпїЅ'},
     'your are lost': {
         'en': 'It seems to be you are lost. Here are some files, that you can open:',
         'de': 'Sieht so aus, als ob du verlaufen bist. Hier sind die Pfade, wohin man gehen kann:',
-        'ru': 'Похоже, что кто-то потерялся. Вот пути по которым можно пойти:'
+        'ru': 'пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ:'
     }
 };
 
@@ -193,6 +193,26 @@ function readProjects(user, callback) {
             }
         }
     }.bind(this));
+}
+
+function readDirs(dirs, cb, result) {
+    result = result || [];
+    if (!dirs || !dirs.length) {
+        return cb && cb(result);
+    }
+    var dir = dirs.shift();
+    adapter.readDir(dir, '', function (err, files) {
+        if (!err && files && files.length) {
+            for (var f = 0; f < files.length; f++) {
+                if (files[f].file.match(/\.html$/)) {
+                    result.push(dir + '/' + files[f].file);
+                }
+            }
+        }
+        setTimeout(function () {
+            readDirs(dirs, cb, result);
+        }, 0);
+    });
 }
 
 //settings: {
@@ -363,6 +383,8 @@ function initWebServer(settings) {
                 return;
             }
 
+            // this code is only active in ioBroker.web
+            /*
             if (url === '/') {
                 try {
                     // read all instances
@@ -398,6 +420,7 @@ function initWebServer(settings) {
                 }
                 return;
             }
+            */
 
             // add index.html
             url = url.replace(/\/($|\?|#)/, '/index.html$1');
