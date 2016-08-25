@@ -5,6 +5,9 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.3.0 (2016-08-25)
+* (bluefox) support of Let's Encrypt
+
 ### 1.2.3 (2016-07-18)
 * (bluefox) fix error with early logout
 * (bluefox) update passport.socketio

@@ -1,9 +1,19 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "1.2.3",
+        "version":                  "1.3.0",
         "title":                    "Special adapter for ioBroker to manage vis views",
 		"news": {
+            "1.2.5": {
+                "en":               "support of Let's Encrypt",
+                "de":               "support of Let's Encrypt",
+                "ru":               "support of Let's Encrypt"
+            },
+            "1.2.4": {
+                "en":               "support of web-socket force",
+                "de":               "support of web-socket force",
+                "ru":               "support of web-socket force"
+            },
 			"1.2.3": {
                 "en":               "fix error with early logout\nupdate passport.socketio",
                 "de":               "fix error with early logout\nupdate passport.socketio",
@@ -56,7 +66,12 @@
         "certPublic":               "",
         "certPrivate":              "",
         "certChained":              "",
-        "newUserGroup":             ""
+        "newUserGroup":             "",
+        "forceWebSockets":          false,
+
+        "leEnabled":                false,
+        "leUpdate":                 false,
+        "leCheckPort":              80
     },
     "objects": [
         {

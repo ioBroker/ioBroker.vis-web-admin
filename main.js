@@ -6,6 +6,7 @@ var express = require('express');
 var fs =      require('fs');
 //var Stream =  require('stream');
 var utils =   require(__dirname + '/lib/utils'); // Get common adapter utils
+var LE =      require(__dirname + '/lib/letsencrypt.js');
 
 var session;// =           require('express-session');
 var cookieParser;// =      require('cookie-parser');
@@ -123,8 +124,9 @@ var adapter = utils.adapter({
 function main() {
     if (adapter.config.secure) {
         // Load certificates
-        adapter.getCertificates(function (err, certificates) {
+        adapter.getCertificates(function (err, certificates, leConfig) {
             adapter.config.certificates = certificates;
+            adapter.config.leConfig     = leConfig;
             webServer = initWebServer(adapter.config);
         });
     } else {
@@ -330,7 +332,7 @@ function initWebServer(settings) {
 
         server.app.get('*/_socket/info.js', function (req, res) {
             res.set('Content-Type', 'application/javascript');
-            res.status(200).send('var socketUrl = "' + socketUrl + '"; var socketSession = "' + '' + '"; sysLang="' + lang + '";');
+            res.status(200).send('var socketUrl = "' + socketUrl + '"; var socketSession = "' + '' + '"; sysLang = "' + lang + '"; socketForceWebSockets = ' + (adapter.config.forceWebSockets ? 'true' : 'false') + ';');
         });
 
         // Enable CORS
@@ -549,11 +551,7 @@ function initWebServer(settings) {
             }
         });
 
-        if (settings.secure) {
-            server.server = require('https').createServer(adapter.config.certificates, server.app);
-        } else {
-            server.server = require('http').createServer(server.app);
-        }
+        server.server = LE.createServer(server.app, settings, adapter.config.certificates, adapter.config.leConfig, adapter.log);
         server.server.__server = server;
     } else {
         adapter.log.error('port missing');
@@ -587,10 +585,11 @@ function initWebServer(settings) {
         var IOSocket = require(utils.appName + '.socketio/lib/socket.js');
         var socketSettings = JSON.parse(JSON.stringify(settings));
         // Authentication checked by server itself
-        socketSettings.auth        = false;
-        socketSettings.secret      = secret;
-        socketSettings.store       = store;
-        socketSettings.ttl         = adapter.config.ttl || 3600;
+        socketSettings.auth             = false;
+        socketSettings.secret           = secret;
+        socketSettings.store            = store;
+        socketSettings.ttl              = adapter.config.ttl || 3600;
+        socketSettings.forceWebSockets  = adapter.config.forceWebSockets || false;
         server.io = new IOSocket(server.server, socketSettings, adapter);
     }
 
