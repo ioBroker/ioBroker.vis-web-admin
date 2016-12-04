@@ -21,11 +21,9 @@
     "type": "git",
     "url": "https://github.com/ioBroker/ioBroker.vis-web-admin"
   },
-  "peerDependencies": {
-    "iobroker.socketio": ">=1.5.3",
-    "iobroker.simple-api": ">=0.1.1"
-  },
   "dependencies": {
+    "iobroker.socketio": ">=1.5.3",
+    "iobroker.simple-api": ">=0.1.1",
     "express": "^4.14.0",
     "request": "^2.75.0",
     "cookie-parser": "^1.4.3",
