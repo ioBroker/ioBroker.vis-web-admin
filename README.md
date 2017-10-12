@@ -5,6 +5,9 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.4.0 (2017-10-12)
+* (bluefox) update
+
 ### 1.3.1 (2016-08-27)
 * (bluefox) support of Let's Encrypt
 
