@@ -8,6 +8,7 @@
 <link rel="stylesheet" type="text/css" href="../../css/adapter.css"/>
 <script type="text/javascript" src="../../js/translate.js"></script>
 <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+<script type="text/javascript" src="words.js"></script>
 
 <style>
     .number {
@@ -16,68 +17,6 @@
 </style>
 
 <script type="text/javascript">
-    systemDictionary = {
-        "WWW Web Server adapter settings": {
-            "de": "WWW Web Server adapter settings",
-            "ru": "WWW Web Server adapter settings"
-        },
-        "Run as:":                {"en": "Run as:",                 "de": "Laufen unter Anwender:",  "ru": "Запустить от пользователя:"},
-        "IP:":                    {"en": "IP:",                     "de": "IP:",                     "ru": "IP:"},
-        "Port:":                  {"en": "Port:",                   "de": "Port:",                   "ru": "Порт:"},
-        "Secure(HTTPS):":         {"en": "Secure(HTTPS):",          "de": "Verschlüsselung(HTTPS):", "ru": "Шифрование(HTTPS):"},
-        "Authentication:":        {"en": "Authentication:",         "de": "Authentifikation:",       "ru": "Аутентификация:"},
-        "Cache:":                 {"en": "none",                    "de": "Puffer:",                 "ru": "Кэш:"},
-        "none":                   {"en": "none",                    "de": "keins",                   "ru": ""},
-        "integrated":             {"en": "integrated",              "de": "integriert",              "ru": "встроенный"},
-        "Public certificate:":    {"en": "Public certificate:",     "de": "Publikzertifikat:",       "ru": "'Public' сертификат:"},
-        "Private certificate:":   {"en": "Private certificate:",    "de": "Privatzertifikat:",       "ru": "'Private' сертификат:"},
-        "Chained certificate:":   {"en": "Chained certificate:",    "de": "Kettenzertifikat:",       "ru": "'Chained' сертификат:"},
-        "Force Web-Sockets:":     {"en": "Force Web-Sockets:",      "de": "Nur Web-Sockets:",        "ru": "Только Web-Sockets:"},
-        "Internal 'Simple API':":   {"en": "Build-in 'Simple-API'",    "de": "Eingebautes 'Simple-API':",       "ru": "Встроенный 'Simple-API':"},
-        "Listen on all IPs": {"en": "Listen on all IPs",       "de": "Alle IPs zulassen",            "ru": "Открыть для всех IP адресов"},
-        "Let's Encrypt settings": {
-            "en": "Let's Encrypt settings",
-            "de": "Einstellungen Let's Encrypt",
-            "ru": "Настройкт Let's Encrypt"
-        },
-        "Use Lets Encrypt certificates:": {
-            "en": "Use Let's Encrypt certificates:",
-            "de": "Benutzen Let's Encrypt Zertifikate:",
-            "ru": "Использовать сертификаты Let's Encrypt:"
-        },
-        "Use this instance for automatic update:": {
-            "en": "Use this instance for automatic update:",
-            "de": "Benutze diese Instanz für automatische Updates:",
-            "ru": "Обновлять сертификаты в этом драйвере:"
-        },
-        "Port to check the domain:": {
-            "en": "Port to check the domain:",
-            "de": "Port um die Domain zu prüfen:",
-            "ru": "Порт для проверки доменного имени:"
-        },
-        "help_tip":         {
-            "en": "On save the adapter restarts with new configuration immediately",
-            "de": "Beim Speichern von Einstellungen der Adapter wird sofort neu gestartet.",
-            "ru": "Сразу после сохранения настроек драйвер перезапуститься с новыми значениями"
-        },
-        "Set certificates or load it first in the system settings (right top).":    {
-            "en": "Set certificates or load it first in the system settings (right top).",
-            "de": "Setze Zertificate oder lade die erst unter System/Einstellungen (oben rechts).",
-            "ru": "Нужно выбрать сертификаты или сначала загрузить их в системных настройках (вверху справа)."
-        },
-        "socket_help":         {
-            "en": "Used by adapters like rickshaw or vis",
-            "de": "Wird von Rickshaw oder Vis benutzt",
-            "ru": "Используется для Rickshaw или Vis"
-        },
-
-        "Socket.IO Instance (Optional):": {
-            "en": "Socket.IO Instance (Optional):",
-            "de": "Socket.IO Instanz (Optional):",
-            "ru": "Socket.IO (опционально):"
-        }
-    };
-
     var supportedSockets = ['socketio'];
 
     function showHideSettings() {
@@ -113,14 +52,21 @@
             $('.defaultUser').show();
             $('#_ttl').hide();
         }
+        if ($('#whiteListEnabled').prop('checked')) {
+            $('.white-list-settings').show();
+        } else {
+            $('.white-list-settings').hide();
+        }
     }
 
     // the function loadSettings has to exist ...
     function load(settings, onChange) {
+        $('#tabs').tabs();
+
         if (!settings) return;
 
         if (!settings.lePort) settings.lePort = 80;
-
+        if (settings.whiteListEnabled === undefined) settings.whiteListEnabled = false;
 
         getIPs(function(ips) {
             for (var i = 0; i < ips.length; i++) {
@@ -128,8 +74,10 @@
             }
             $('#bind.value').val(settings.bind);
         });
-        $('#socketio').append('<option value="none">' + _('none') + '</option>');
-        $('#socketio').append('<option value="">' + _('integrated') + '</option>');
+        $('#socketio')
+            .append('<option value="none">' + _('none') + '</option>')
+            .append('<option value="">' + _('integrated') + '</option>');
+
         var count = 0;
         for (var i = 0; i < supportedSockets.length; i++) {
             count++;
@@ -138,13 +86,13 @@
                 for (var t = 0; t < res.length; t++) {
                     $('#socketio').append('<option value="' + res[t]._id + '">' + res[t].common.name + ' [' + res[t]._id.replace('system.adapter.', '') + ']</option>');
                 }
-                count--;
-                if (!count) {
-                    $('#socketio').val(settings.socketio);
+                if (!--count) {
+                    var $socketio = $('#socketio');
+                    $socketio.val(settings.socketio);
                     if (settings.socketio !== '') {
                         $('.socketio').hide();
                     }
-                    $('#socketio').change(function () {
+                    $socketio.change(function () {
                         if ($(this).val() === '') {
                             $('.socketio').show();
                         } else {
@@ -155,16 +103,17 @@
             });
         }
 
+
         $('.value').each(function () {
             var key = $(this).attr('id');
-            // example: select elements with id=key and class=value and insert value
-            if ($('#' + key + '.value').attr('type') == 'checkbox') {
-                $('#' + key + '.value').prop('checked', settings[key]).change(function() {
+            var $value = $('#' + key + '.value');
+            if ($value.attr('type') === 'checkbox') {
+                $value.prop('checked', settings[key]).change(function() {
                     showHideSettings();
                     onChange();
                 });
             } else {
-                $('#' + key + '.value').val(settings[key]).change(function() {
+                $value.val(settings[key]).change(function() {
                     onChange();
                 }).keyup(function() {
                     $(this).trigger('change');
@@ -210,14 +159,11 @@
         });
     }
 
-    // ... and the function save has to exist.
-    // you have to make sure the callback is called with the settings object as first param!
     function save(callback) {
-        // example: select elements with class=value and build settings object
         var obj = {};
         $('.value').each(function () {
             var $this = $(this);
-            if ($this.attr('type') == 'checkbox') {
+            if ($this.attr('type') === 'checkbox') {
                 obj[$this.attr('id')] = $this.prop('checked');
             } else {
                 obj[$this.attr('id')] = $this.val();
@@ -233,45 +179,188 @@
     }
 </script>
 
-<!-- you have to put your config page in a div with id adapter-container -->
+<style>
+    .whiteListTableHeader {
+        background-color: lightgrey;
+        color: darkslateblue;
+    }
+
+    .whiteListTableUnevenBlock {
+        background-color: gainsboro;
+    }
+
+    .whiteListTableEvenBlock {
+        background-color: lavender;
+    }
+</style>
+</head>
+<body>
 <div id="adapter-container">
-
-    <table><tr><td><img src="vis-web-admin.png"></td><td><h3 class="translate">Special Web Server adapter settings</h3></td></tr></table>
-
     <table>
-        <tr><td class="translate">IP:</td><td>            <select class="value" id="bind"></select></td><td></td></tr>
-        <tr><td class="translate">Port:</td><td>          <input  class="value" id="port" size="5"  maxlength="5"/></td><td></td></tr>
-        <tr><td class="translate">Secure(HTTPS):</td><td> <input  class="value" id="secure" type="checkbox" /></td><td></td></tr>
-        <tr id="_certPublic">
-            <td class="translate">Public certificate:</td>
-            <td><select id="certPublic" class="value"></select></td>
+        <tr>
+            <td><img src="web.png"></td>
+            <td><h3 class="translate">Web Server adapter settings</h3></td>
         </tr>
-        <tr id="_certPrivate">
-            <td class="translate">Private certificate:</td>
-            <td><select id="certPrivate" class="value"></select></td>
-        </tr>
-        <tr id="_certChained">
-            <td class="translate">Chained certificate:</td>
-            <td><select id="certChained" class="value"></select></td>
-        </tr>
-        <tr><td class="translate">Authentication:</td><td><input  class="value" id="auth"   type="checkbox" /></td><td></td></tr>
-        <tr id="_ttl"><td class="translate">Login timeout(sec):</td><td><input  class="value" id="ttl"/></td><td></td></tr>
-        <tr><td class="translate">Cache:</td><td>         <input  class="value" id="cache"  type="checkbox" /></td><td></td></tr>
-        <tr><td class="translate">Socket.IO Instance (Optional):</td><td><select class="value" id="socketio"></select><span class="translate" style="padding-left: 20">socket_help</span></td></tr>
-        <tr class="socketio"><td class="translate">Force Web-Sockets:</td><td><input type="checkbox" class="value" id="forceWebSockets"/></td></tr>
-        <tr><td><a href="https://github.com/ioBroker/ioBroker.simple-api/blob/master/README.md" class="translate" target="_blank">Internal 'Simple API':</a></td><td><input type="checkbox" class="value" id="simpleapi"/></td></tr>
-        <tr class="defaultUser"><td class="translate">Run as:</td><td><select class="value" id="defaultUser" /></td></tr>
-        <tr><td class="translate">Login Redirect:</td><td><select class="value" id="loginRedirect" /></td></tr>
-        <tr><td class="translate">New user's group:</td><td><select class="value" id="newUserGroup" /></td></tr>
+    </table>
+
+    <div id="tabs">
+        <ul>
+            <li><a href="#tabs-1" class="translate">General</a></li>
+            <li><a href="#tabs-2" class="translate">White List</a></li>
+        </ul>
+        <div id="tabs-1">
+            <table>
+                <tr>
+                    <td><label class="translate" for="bind">IP:</label></td>
+                    <td><select class="value" id="bind"></select></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><label class="translate" for="port">Port:</label></td>
+                    <td><input class="value" id="port" size="5" maxlength="5" type="number"/></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><label class="translate" for="secure">Secure(HTTPS):</label></td>
+                    <td><input class="value" id="secure" type="checkbox"/></td>
+                    <td></td>
+                </tr>
+                <tr id="_certPublic">
+                    <td><label class="translate" for="certPublic">Public certificate:</label></td>
+                    <td><select id="certPublic" class="value"></select></td>
+                </tr>
+                <tr id="_certPrivate">
+                    <td><label class="translate" for="certPrivate">Private certificate:</label></td>
+                    <td><select id="certPrivate" class="value"></select></td>
+                </tr>
+                <tr id="_certChained">
+                    <td><label class="translate" for="certChained">Chained certificate:</label></td>
+                    <td><select id="certChained" class="value"></select></td>
+                </tr>
+                <tr>
+                    <td><label class="translate" for="auth">Authentication:</label></td>
+                    <td><input class="value" id="auth" type="checkbox"/></td>
+                    <td></td>
+                </tr>
+                <tr id="_ttl">
+                    <td><label class="translate" for="ttl">Login timeout(sec):</label></td>
+                    <td><input  class="value" id="ttl" type="number"/></td>
+                    <td></td></tr>
+                <tr>
+                    <td><label class="translate" for="cache">Cache:</label></td>
+                    <td><input class="value" id="cache" type="checkbox"/></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><label class="translate" for="socketio">Socket.IO Instance (Optional):</label></td>
+                    <td><select class="value" id="socketio"></select><span class="translate"
+                                                                           style="padding-left: 20px">socket_help</span>
+                    </td>
+                </tr>
+                <tr class="socketio">
+                    <td><label class="translate" for="forceWebSockets">Force Web-Sockets:</label></td>
+                    <td><input type="checkbox" class="value" id="forceWebSockets"/></td></tr>
+                <tr>
+                    <td><label class="translate" for="simpleapi">Internal 'Simple API':</label></td>
+                    <td><input type="checkbox" class="value" id="simpleapi"/></td>
+                </tr>
+                <tr class="defaultUser">
+                    <td><label class="translate" for="defaultUser">Run as:</label></td>
+                    <td><select class="value" id="defaultUser"></select></td>
+                </tr>
                 <tr><td colspan="2">&nbsp;</td></tr>
                 <tr class="le-settings"><td colspan="2"><h3 class="translate">Let's Encrypt settings</h3></tr>
                 <tr class="le-settings"><td><label for="leEnabled" class="translate">Use Lets Encrypt certificates:</label></td><td><input  class="value" id="leEnabled"   type="checkbox" /></td></tr>
                 <tr class="le-settings le-sub-settings"><td><label for="leUpdate" class="translate">Use this instance for automatic update:</label></td><td><input  class="value" id="leUpdate" type="checkbox" /></td></tr>
                 <tr class="le-settings le-sub-settings le-sub-settings-update"><td><label for="lePort" class="translate">Port to check the domain:</label></td><td><input class="value number" id="lePort" type="number" size="5" maxlength="5" /></td></tr>
 
-    </table>
+                <tr><td colspan="2">&nbsp;</td></tr>
+                <tr><td><label for="loginRedirect" class="translate">Login Redirect:</label></td><td><select class="value" id="loginRedirect"></select></td></tr>
+                <tr><td><label for="newUserGroup" class="translate">New user's group:</label></td><td><select class="value" id="newUserGroup"></select></td></tr>
+            </table>
+        </div>
+        <div id="tabs-2">
+            <div>
+                <span><label class="translate" for="whiteListEnabled">Enabled:</label></span><input id="whiteListEnabled" class="value" type="checkbox" />
+            </div>
+            <button style="display: inline-block; width: 2em; height: 2em;" onclick="addWhiteListTableRow(true)"
+                    class="ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only white-list-settings" role="button">
+                <span class="ui-button-icon-primary ui-icon ui-icon-plus"></span>
+                <span class="ui-button-text"></span>
+            </button>
 
-    <p class="translate">help_tip</p>
+            <table id="whiteListTable" cellpadding="3" cellspacing="2" border="0" class="white-list-settings">
+                <thead>
+                <tr class="whiteListTableHeader">
+                    <th rowspan="2" colspan="2" class="translate">IP</th>
+                    <th rowspan="2" class="translate">User</th>
+                    <th colspan="4" class="translate">object</th>
+                    <th colspan="5" class="translate">state</th>
+                    <th colspan="5" class="translate">file</th>
+                </tr>
+                <tr class="whiteListTableHeader">
+                    <th class="translate">read</th>
+                    <th class="translate">list</th>
+                    <th class="translate">write</th>
+                    <th class="translate">remove</th>
 
+                    <th class="translate">read</th>
+                    <th class="translate">list</th>
+                    <th class="translate">write</th>
+                    <th class="translate">create</th>
+                    <th class="translate">remove</th>
+
+                    <th class="translate">read</th>
+                    <th class="translate">list</th>
+                    <th class="translate">write</th>
+                    <th class="translate">create</th>
+                    <th class="translate">remove</th>
+                </tr>
+                </thead>
+                <tbody id="whiteListTableBody">
+                <tr>
+                    <td class="whiteListTableUnevenBlock delete-btn-clmn"><a class="delete-btn" href="#"><span
+                            class="ui-icon ui-icon-trash"></span></a></td>
+
+                    <td class="whiteListTableUnevenBlock">default</td>
+
+                    <td class="whiteListTableUnevenBlock defaultUserName">defaultName</td>
+
+                    <td class="whiteListTableEvenBlock"><input permobject="object" perm="read" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="object" perm="list" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="object" perm="write" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="object" perm="delete" type="checkbox"
+                                                               checked="true"/></td>
+
+                    <td class="whiteListTableUnevenBlock"><input permobject="state" perm="read" type="checkbox"
+                                                                 checked="true"/></td>
+                    <td class="whiteListTableUnevenBlock"><input permobject="state" perm="list" type="checkbox"
+                                                                 checked="true"/></td>
+                    <td class="whiteListTableUnevenBlock"><input permobject="state" perm="write" type="checkbox"
+                                                                 checked="true"/></td>
+                    <td class="whiteListTableUnevenBlock"><input permobject="state" perm="create" type="checkbox"
+                                                                 checked="true"/></td>
+                    <td class="whiteListTableUnevenBlock"><input permobject="state" perm="delete" type="checkbox"
+                                                                 checked="true"/></td>
+
+                    <td class="whiteListTableEvenBlock"><input permobject="file" perm="read" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="file" perm="list" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="file" perm="write" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="file" perm="create" type="checkbox"
+                                                               checked="true"/></td>
+                    <td class="whiteListTableEvenBlock"><input permobject="file" perm="delete" type="checkbox"
+                                                               checked="true"/></td>
+                </tr>
+                </tbody>
+            </table >
+
+        </div>
+    </div>
 </div>
 </html>

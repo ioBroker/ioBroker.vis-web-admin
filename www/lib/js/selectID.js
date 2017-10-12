@@ -1,5 +1,7 @@
 /*
- Copyright 2014-2016 bluefox <dogafox@gmail.com>
+ Copyright 2014-2017 bluefox <dogafox@gmail.com>
+
+ version: 1.0.4 (2017.04.25)
 
  To use this dialog as standalone in ioBroker environment include:
  <link type="text/css" rel="stylesheet" href="lib/css/redmond/jquery-ui.min.css">
@@ -60,6 +62,12 @@
              firstMinWidth: null,  // width if ID column, default 400
              showButtonsForNotExistingObjects: false,
              webServer:    null,   // link to webserver, by default ":8082"
+             filterPresets: null,  // Object with predefined filters, eg {role: 'level.dimmer'} or {type: 'state'}
+             roleExactly:   false, // If the role must be equal or just content the filter value
+             sortConfig: {
+                     statesFirst: true,     // Show states before folders
+                     ignoreSortOrder: false // Ignore standard sort order of fancytree
+             },
              texts: {
                  select:   'Select',
                  cancel:   'Cancel',
@@ -82,6 +90,7 @@
                  refresh:  'Rebuild tree',
                  edit:     'Edit',
                  ok:       'Ok',
+                 push:     'Trigger event'
                  wait:     'Processing...',
                  list:     'Show list view',
                  tree:     'Show tree view',
@@ -101,18 +110,27 @@
              expertModeRegEx: null // list of regex with objects, that will be shown only in expert mode, like  /^system\.|^iobroker\.|^_|^[\w-]+$|^enum\.|^[\w-]+\.admin/
              quickEdit:  null,   // list of fields with edit on click. Elements can be just names from standard list or objects like:
                                  // {name: 'field', options: {a1: 'a111_Text', a2: 'a22_Text'}}, options can be a function (id, name), that give back such an object
-             quickEditCallback: null // function (id, attr, newValue, oldValue)
+             quickEditCallback: null, // function (id, attr, newValue, oldValue),
+             readyCallback: null // called when objects and states are read from server (only if connCfg is not null). function (err, objects, states)
      }
- +  show(currentId, filter, callback) - all arguments are optional if set by "init"
+ +  show(currentId, filter, callback) - all arguments are optional if set by "init". Callback is like function (newId, oldId) {}. If multiselect, so the arguments are arrays.
  +  clear() - clear object tree to read and build anew (used only if objects set by "init")
  +  getInfo(id) - get information about ID
  +  getTreeInfo(id) - get {id, parent, children, object}
  +  state(id, val) - update states in tree
  +  object(id, obj) - update object info in tree
  +  reinit() - draw tree anew
+
+
+ filter is like:
+     common: {
+         history: true
+     }
+  or
+     type: "state"
  */
 (function ($) {
-    "use strict";
+    'use strict';
 
     if ($.fn.selectId) return;
 
@@ -171,7 +189,7 @@
         } else {
             text += '.' + v;
         }
-        
+
         return text;
     }
 
@@ -179,16 +197,120 @@
         if (data.rootExp) {
             if (!data.rootExp.test(id)) return false;
         }
+        // ignore system objects in expert mode
+        if (data.expertModeRegEx && !data.expertMode && data.expertModeRegEx.test(id)) {
+            return false;
+        }
 
         if (data.filter) {
             if (data.filter.type && data.filter.type !== data.objects[id].type) return false;
 
             if (data.filter.common && data.filter.common.custom) {
-                if (!data.objects[id].common ||
-                    !data.objects[id].common.custom) return false;
+                if (!data.objects[id].common) return false;
+                // todo: remove history sometime 09.2016
+                var custom = data.objects[id].common.custom || data.objects[id].common.history;
+
+                if (!custom) return false;
+                if (data.filter.common.custom === true) {
+                    return true;
+                } else {
+                    if (!custom[data.filter.common.custom]) return false;
+                }
             }
         }
         return true;
+    }
+
+    function getExpandeds(data) {
+        if (!data.$tree) return null;
+        var expandeds = {};
+        (function getIt(node) {
+            if (!node.children || !(node.children instanceof Array)) return;
+            node.children.forEach(function (_node) {
+                if (_node.expanded) {
+                    expandeds[_node.key] = true;
+                }
+                getIt(_node);
+            })
+        })(data.$tree.fancytree('getRootNode'));
+        return expandeds;
+    }
+
+    function restoreExpandeds(data, expandeds) {
+        if (!expandeds || !data.$tree) return;
+        (function setIt(node) {
+            if (!node.children || !(node.children instanceof Array)) return;
+            node.children.forEach(function (_node) {
+                if (expandeds[_node.key]) {
+                    try {
+                        _node.setExpanded();
+                    } catch (e) {
+                        console.error('Cannot expand: ' + e);
+                    }
+                    //_node.setActive();
+                }
+                setIt(_node);
+            })
+        })(data.$tree.fancytree('getRootNode'));
+        expandeds = null;
+    }
+
+    function sortTree(data) {
+        var objects = data.objects;
+        var checkStatesFirst;
+        switch (data.sortConfig.statesFirst) {
+            case undefined: checkStatesFirst = function() { return 0 }; break;
+            case true:      checkStatesFirst = function(child1, child2) { return ((~~child2.folder) - (~~child1.folder))}; break;
+            case false:     checkStatesFirst = function(child1, child2) { return ((~~child1.folder) - (~~child2.folder))}; break;
+        }
+
+        function sortByName(child1, child2) {
+            var ret = checkStatesFirst(child1, child2);
+            if (ret) return ret;
+
+            var o1 = objects[child1.key], o2 = objects[child2.key];
+            if (o1 && o2) {
+                var c1 = o1.common, c2 = o2.common;
+                if (c1 && c2) {
+                    if (!data.sortConfig.ignoreSortOrder && c1.sortOrder && c2.sortOrder) {
+                        if (c1.sortOrder > c2.sortOrder) return 1;
+                        if (c1.sortOrder < c2.sortOrder) return -1;
+                        return 0;
+                    }
+                    var name1 = c1.name ? c1.name.toLowerCase() : child1.key;
+                    var name2 = c2.name ? c2.name.toLowerCase() : child2.key;
+                    if (name1 > name2) return 1;
+                    if (name1 < name2) return -1;
+                }
+            }
+            if (child1.key > child2.key) return 1;
+            if (child1.key < child2.key) return -1;
+            return 0;
+        }
+
+        function sortByKey(child1, child2) {
+            var ret = checkStatesFirst(child1, child2);
+            if (ret) return ret;
+            if (!data.sortConfig.ignoreSortOrder) {
+                var o1 = objects[child1.key], o2 = objects[child2.key];
+                if (o1 && o2) {
+                    var c1 = o1.common, c2 = o2.common;
+                    if (c1 && c2 && c1.sortOrder && c2.sortOrder) {
+                        if (c1.sortOrder > c2.sortOrder) return 1;
+                        if (c1.sortOrder < c2.sortOrder) return -1;
+                        return 0;
+                    }
+                }
+            }
+            if (child1.key > child2.key) return 1;
+            if (child1.key < child2.key) return -1;
+            return 0;
+        }
+
+
+        data.$tree.fancytree('getRootNode').sortChildren(data.sort ? sortByName : sortByKey, true);
+        //var tree = data.$tree.fancytree('getTree');
+        //var node = tree.getActiveNode();
     }
 
     function getAllStates(data) {
@@ -198,14 +320,57 @@
         var isFunc  = data.columns.indexOf('function') !== -1;
         var isRole  = data.columns.indexOf('role') !== -1;
         var isHist  = data.columns.indexOf('button') !== -1;
+
         data.tree = {title: '', children: [], count: 0, root: true};
         data.roomEnums = [];
         data.funcEnums = [];
 
         for (var id in objects) {
-
-            if (isRoom && objects[id].type === 'enum' && data.regexEnumRooms.test(id)) data.roomEnums.push(id);
-            if (isFunc && objects[id].type === 'enum' && data.regexEnumFuncs.test(id)) data.funcEnums.push(id);
+            if (!objects.hasOwnProperty(id)) continue;
+            if (isRoom) {
+                if (objects[id].type === 'enum' && data.regexEnumRooms.test(id) && data.roomEnums.indexOf(id) === -1) data.roomEnums.push(id);
+                if (objects[id].enums) {
+                    for (var e in objects[id].enums) {
+                        if (data.regexEnumRooms.test(e) && data.roomEnums.indexOf(e) === -1) {
+                            data.roomEnums.push(e);
+                        }
+                        data.objects[e] = data.objects[e] || {
+                            _id: e,
+                            common: {
+                                name: objects[id].enums[e],
+                                members: [id]
+                            }
+                        };
+                        data.objects[e].common.members = data.objects[e].common.members || [];
+                        if (data.objects[e].common.members.indexOf(id) === -1) {
+                            data.objects[e].common.members.push(id);
+                        }
+                    }
+                }
+            }
+            if (isFunc) {
+                if (objects[id].type === 'enum' && data.regexEnumFuncs.test(id)  && data.funcEnums.indexOf(id) === -1) {
+                    data.funcEnums.push(id);
+                }
+                if (objects[id].enums) {
+                    for (var e in objects[id].enums) {
+                        if (data.regexEnumFuncs.test(e) && data.funcEnums.indexOf(e) === -1) {
+                            data.funcEnums.push(e);
+                        }
+                        data.objects[e] = data.objects[e] || {
+                            _id: e,
+                            common: {
+                                name: objects[id].enums[e],
+                                members: [id]
+                            }
+                        };
+                        data.objects[e].common.members = data.objects[e].common.members || [];
+                        if (data.objects[e].common.members.indexOf(id) === -1) {
+                            data.objects[e].common.members.push(id);
+                        }
+                    }
+                }
+            }
 
             if (isType && objects[id].type && data.types.indexOf(objects[id].type) === -1) data.types.push(objects[id].type);
 
@@ -225,9 +390,6 @@
                 var h = id.substring('system.adapter.'.length);
                 if (data.histories.indexOf(h) === -1) data.histories.push(h);
             }
-
-            // ignore system objects in expert mode
-            if (data.expertModeRegEx && !data.expertMode && data.expertModeRegEx.test(id)) continue;
 
             if (!filterId(data, id)) continue;
 
@@ -304,84 +466,139 @@
     function deleteTree(data, id, deletedNodes) {
         var node = findTree(data, id);
         if (!node) {
-            console.log('Id ' + id + ' not found');
+            console.log('deleteTree: Id ' + id + ' not found');
             return;
         }
         _deleteTree(node, deletedNodes);
     }
 
     function findTree(data, id) {
-        return _findTree(data.tree, treeSplit(data, id, false), 0);
-    }
-    function _findTree(tree, parts, index) {
-        var num = -1;
-        for (var j = 0; j < tree.children.length; j++) {
-            if (tree.children[j].title === parts[index]) {
-                num = j;
-                break;
+        return (function find(tree) {
+            if (!tree.children) return;
+            for (var i=tree.children.length-1; i>=0; i--) {
+                var child = tree.children[i];
+                if (id === child.key) return child;
+                if (id.startsWith(child.key + '.')) {
+                    return find(child);
+                }
             }
-            if (tree.children[j].title > parts[index]) break;
-        }
-
-        if (num === -1) return null;
-
-        if (parts.length - 1 === index) {
-            return tree.children[num];
-        } else {
-            return _findTree(tree.children[num], parts, index + 1);
-        }
+            return null;
+        })(data.tree);
     }
+
+    // function findTree(data, id) {
+    //     return _findTree(data.tree, treeSplit(data, id, false), 0);
+    // }
+    // function _findTree(tree, parts, index) {
+    //     var num = -1;
+    //     for (var j = 0; j < tree.children.length; j++) {
+    //         if (tree.children[j].title === parts[index]) {
+    //             num = j;
+    //             break;
+    //         }
+    //         //if (tree.children[j].title > parts[index]) break;
+    //     }
+    //
+    //     if (num === -1) return null;
+    //
+    //     if (parts.length - 1 === index) {
+    //         return tree.children[num];
+    //     } else {
+    //         return _findTree(tree.children[num], parts, index + 1);
+    //     }
+    // }
 
     function treeInsert(data, id, isExpanded, addedNodes) {
-        return _treeInsert(data.tree, data.list ? [id] : treeSplit(data, id, false), id, 0, isExpanded, addedNodes, data);
+        var idArr = data.list ? [id] : treeSplit(data, id);
+        if (!idArr) return console.error('Empty object ID!');
+
+        (function insert(tree, idx) {
+            for ( ; idx < idArr.length; idx += 1) {
+                for (var i = tree.children.length - 1; i >= 0; i--) {
+                    var child = tree.children[i];
+                    if (id === child.key) return child;
+                    if (id.startsWith (child.key + '.')) {
+                        child.expanded = child.expanded || isExpanded;
+                        return insert (child, idx + 1);
+                    }
+                }
+                tree.folder = true;
+                tree.expanded = isExpanded;
+
+                var obj = {
+                    key: (data.root || '') + idArr.slice (0, idx + 1).join ('.'),
+                    children: [],
+                    title: idArr[idx],
+                    folder: false,
+                    expanded: false,
+                    parent: tree
+                };
+                tree.children.push (obj);
+                if (addedNodes) {
+                    addedNodes.push (obj);
+                }
+                tree = obj;
+            }
+            tree.id = id;
+        })(data.tree, 0);
     }
-    function _treeInsert(tree, parts, id, index, isExpanded, addedNodes, data) {
-        if (!index) index = 0;
 
-        var num = -1;
-        var j;
-        for (j = 0; j < tree.children.length; j++) {
-            if (tree.children[j].title === parts[index]) {
-                num = j;
-                break;
-            }
-            if (tree.children[j].title > parts[index]) break;
-        }
-
-        if (num === -1) {
-            tree.folder   = true;
-            tree.expanded = isExpanded;
-
-            var fullName = '';
-            for (var i = 0; i <= index; i++) {
-                fullName += ((fullName) ? '.' : '') + parts[i];
-            }
-            var obj = {
-                key:      (data.root || '') + fullName,
-                children: [],
-                title:    parts[index],
-                folder:   false,
-                expanded: false,
-                parent:   tree
-            };
-            if (j === tree.children.length) {
-                num = tree.children.length;
-                tree.children.push(obj);
-            } else {
-                num = j;
-                tree.children.splice(num, 0, obj);
-            }
-            if (addedNodes) {
-                addedNodes.push(tree.children[num]);
-            }
-        }
-        if (parts.length - 1 === index) {
-            tree.children[num].id = id;
-        } else {
-            tree.children[num].expanded = tree.children[num].expanded || isExpanded;
-            _treeInsert(tree.children[num], parts, id, index + 1, isExpanded, addedNodes, data);
-        }
-    }
+    // function treeInsert(data, id, isExpanded, addedNodes) {
+    //     //return xtreeInsert(data, id, isExpanded, addedNodes);
+    //     return _treeInsert(data.tree, data.list ? [id] : treeSplit(data, id, false), id, 0, isExpanded, addedNodes, data);
+    // }
+    // function _treeInsert(tree, parts, id, index, isExpanded, addedNodes, data) {
+    //     index = index || 0;
+    //
+    //     if (!parts) {
+    //         console.error('Empty object ID!');
+    //         return;
+    //     }
+    //
+    //     var num = -1;
+    //     var j;
+    //     for (j = 0; j < tree.children.length; j++) {
+    //         if (tree.children[j].title === parts[index]) {
+    //             num = j;
+    //             break;
+    //         }
+    //         //if (tree.children[j].title > parts[index]) break;
+    //     }
+    //
+    //     if (num === -1) {
+    //         tree.folder   = true;
+    //         tree.expanded = isExpanded;
+    //
+    //         var fullName = '';
+    //         for (var i = 0; i <= index; i++) {
+    //             fullName += ((fullName) ? '.' : '') + parts[i];
+    //         }
+    //         var obj = {
+    //             key:      (data.root || '') + fullName,
+    //             children: [],
+    //             title:    parts[index],
+    //             folder:   false,
+    //             expanded: false,
+    //             parent:   tree
+    //         };
+    //         if (j === tree.children.length) {
+    //             num = tree.children.length;
+    //             tree.children.push(obj);
+    //         } else {
+    //             num = j;
+    //             tree.children.splice(num, 0, obj);
+    //         }
+    //         if (addedNodes) {
+    //             addedNodes.push(tree.children[num]);
+    //         }
+    //     }
+    //     if (parts.length - 1 === index) {
+    //         tree.children[num].id = id;
+    //     } else {
+    //         tree.children[num].expanded = tree.children[num].expanded || isExpanded;
+    //         _treeInsert(tree.children[num], parts, id, index + 1, isExpanded, addedNodes, data);
+    //     }
+    // }
 
     function showActive($dlg, scrollIntoView)  {
         var data = $dlg.data('selectId');
@@ -675,8 +892,8 @@
                 $this.html(_oldText).click(onQuickEditField).addClass('select-id-quick-edit');
             }.bind(this), 100);
         }).keyup(function (e) {
-            if (e.which == 13) $(this).trigger('blur');
-            if (e.which == 27) {
+            if (e.which === 13) $(this).trigger('blur');
+            if (e.which === 27) {
                 if (clippy) $this.addClass('clippy');
                 var old = $this.data('old-value');
                 if (old === undefined) old = '';
@@ -718,8 +935,13 @@
             data.expertMode = window.localStorage.getItem(data.name + '-expert');
             data.expertMode = (data.expertMode === true || data.expertMode === 'true');
         }
+        if (typeof Storage !== 'undefined' && data.name) { //} && data.sort) {
+            data.sort = window.localStorage.getItem(data.name + '-sort');
+            data.sort = (data.sort === true || data.sort === 'true');
+        }
 
         // Get all states
+        var expandeds = getExpandeds(data);
         getAllStates(data);
 
         if (!data.noDialog && !data.buttonsDlg) {
@@ -819,7 +1041,7 @@
             var name = data.columns[c];
             if (typeof name === 'object') name = name.name;
             if (name === 'image') {
-                text += '<col width="' + (data.widths ? data.widths[c] : '20px') + '"/>';
+                text += '<col width="' + (data.widths ? data.widths[c] : '24px') + '"/>';
             } else if (name === 'name') {
                 text += '<col width="' + (data.widths ? data.widths[c] : '*') + '"/>';
             } else if (name === 'type') {
@@ -857,6 +1079,7 @@
         if (data.expertModeRegEx) {
             text += '<td style="padding-left: 10px"><button id="btn_expert_' + data.instance + '"></button></td>';
         }
+        text += '<td><button id="btn_sort_'     + data.instance + '"></button></td>';
 
         if (data.panelButtons) {
             text += '<td style="width: 20px">&nbsp;&nbsp;</td>';
@@ -868,9 +1091,9 @@
         text += '<td class="ui-widget" style="width: 100%; text-align: center; font-weight: bold; font-size: medium">' + data.texts.id + '</td></tr></table></th>';
 
         for (c = 0; c < data.columns.length; c++) {
-            var name = data.columns[c];
-            if (typeof name === 'object') name = name.name;
-            text += '<th class="ui-widget" style="font-size: medium">' + (data.texts[name] || '') + '</th>';
+            var _name = data.columns[c];
+            if (typeof _name === 'object') _name = name.name;
+            text += '<th class="ui-widget" style="font-size: medium">' + (data.texts[_name] || '') + '</th>';
         }
 
         text += '<th></th></tr>';
@@ -888,7 +1111,7 @@
                 text += '<td><table style="width: 100%"><tr><td style="width: 100%"><input style="width: 100%; padding: 0" type="text" id="filter_' + data.columns[c] + '_'  + data.instance + '" class="filter_' + data.instance + '"/></td><td style="vertical-align: top;"><button data-id="filter_' + data.columns[c] + '_'  + data.instance + '" class="filter_btn_' + data.instance + '"></button></td></tr></table></td>';
             } else if (name === 'type') {
                 text += '<td>' + textTypes + '</td>';
-            } else if (name== 'role') {
+            } else if (name === 'role') {
                 text += '<td>' + textRoles + '</td>';
             } else if (name === 'room') {
                 text += '<td>' + textRooms + '</td>';
@@ -907,7 +1130,7 @@
 
                     t += '</select>';
 
-                    text += '<table cellpadding="0" cellspacing="0" style="border-spacing: 0px 0px"><tr><td>' + t + '</td>' + '<td><button id="filter_' + data.columns[c] + '_'  + data.instance + '_btn"></button></td></tr></table>'
+                    text += '<table cellpadding="0" cellspacing="0" style="border-spacing: 0 0"><tr><td>' + t + '</td>' + '<td><button id="filter_' + data.columns[c] + '_'  + data.instance + '_btn"></button></td></tr></table>'
                 }
                 text += '</td>';
             } else {
@@ -930,7 +1153,7 @@
             var name = data.columns[c];
             if (typeof name === 'object') name = name.name;
             if (name === 'image') {
-                text += '<col width="' + (data.widths ? data.widths[c] : '20px') + '"/>';
+                text += '<col width="' + (data.widths ? data.widths[c] : '24px') + '"/>';
             } else if (name === 'name') {
                 text += '<col width="' + (data.widths ? data.widths[c] : '*') + '"/>';
             } else if (name === 'type') {
@@ -1036,19 +1259,34 @@
             },
             renderColumns: function (event, _data) {
                 var node = _data.node;
-                var $tdList = $(node.tr).find('>td');
+                var $tr     = $(node.tr);
+                var $tdList = $tr.find('>td');
 
                 var isCommon = data.objects[node.key] && data.objects[node.key].common;
-                $tdList.eq(1).css({'overflow': 'hidden'});
+                var $firstTD = $tdList.eq(1);
+                $firstTD.css({'overflow': 'hidden'});
                 var base = 2;
 
                 // hide checkbox if only states should be selected
                 if (data.filter && data.filter.type === 'state' && (!data.objects[node.key] || data.objects[node.key].type !== 'state')) {
-                    $tdList.eq(1).find('.fancytree-checkbox').hide();
+                    $firstTD.find('.fancytree-checkbox').hide();
+                }
+
+                // special case for javascript scripts
+                if (data.objects[node.key] && (node.key.match(/^script\.js\./) || node.key.match(/^enum\.[\w\d_-]+$/))) {
+                    if (data.objects[node.key].type !== 'script') {
+                        // force folder icon and change color
+                        if (node.key !== 'script.js.global') {
+                            $firstTD.find('.fancytree-title').css({'font-weight': 'bold', color: '#000080'});
+                        } else {
+                            $firstTD.find('.fancytree-title').css({'font-weight': 'bold', color: '#078a0c'});
+                        }
+                        $firstTD.addClass('fancytree-force-folder');
+                    }
                 }
 
                 if (!data.noCopyToClipboard) {
-                    $tdList.eq(1)
+                    $firstTD
                         .addClass('clippy')
                         .data('clippy', node.key)
                         .css({position: 'relative'})
@@ -1058,7 +1296,7 @@
                 }
 
                 if (data.useNameAsId && data.objects[node.key] && data.objects[node.key].common && data.objects[node.key].common.name) {
-                    $tdList.eq(1).find('.fancytree-title').html(data.objects[node.key].common.name);
+                    $firstTD.find('.fancytree-title').html(data.objects[node.key].common.name);
                 }
                 var $elem;
                 var val;
@@ -1106,7 +1344,7 @@
                             }
                         }
                         if (icon) {
-                            $tdList.eq(base).html('<img width="20px" height="20px" src="' + icon + '" alt="' + alt + '"/>');
+                            $tdList.eq(base).html('<img width="16px" height="16px" src="' + icon + '" alt="' + alt + '"/>');
                         } else {
                             $tdList.eq(base).text('');
                         }
@@ -1254,7 +1492,15 @@
                             e.preventDefault();
                         });
 
-                        if (data.quickEdit && data.objects[node.key] && data.objects[node.key].type === 'state' && data.quickEdit.indexOf('value') !== -1) {
+                        if (data.quickEdit &&
+                            data.objects[node.key] &&
+                            data.objects[node.key].type === 'state' &&
+                            data.quickEdit.indexOf('value') !== -1  &&
+                            (data.expertMode || data.objects[node.key].common.write !== false)
+                        ) {
+                            if (data.objects[node.key].common.role === 'button' && !data.expertMode) {
+                                $tdList.eq(base).html('<button data-id="' + node.key + '" class="select-button-push"></button>');
+                            } else
                             if (!data.objects[node.key].common || data.objects[node.key].common.type !== 'file') {
                                 var val = data.states[node.key];
                                 val = val ? val.val : '';
@@ -1266,6 +1512,16 @@
                                     .data('selectId', data)
                                     .addClass('select-id-quick-edit');
                             }
+
+                            $tr.find('.select-button-push[data-id="' + node.key + '"]').button({
+                                text: false,
+                                icons: {
+                                    primary: 'ui-icon-arrowthickstop-1-s'
+                                }
+                            }).click(function () {
+                                var id = $(this).data('id');
+                                data.quickEditCallback(id, 'value', true);
+                            }).attr('title', data.texts.push).css({width: 26, height: 20});
                         }
 
                         if (common.type === 'file') {
@@ -1297,7 +1553,7 @@
                                 $tdList.eq(base).html(text);
 
                                 for (var p = 0; p < data.buttons.length; p++) {
-                                    var btn = $('.select-button-' + p + '[data-id="' + node.key + '"]').button(data.buttons[p]).click(function () {
+                                    var btn = $tr.find('.select-button-' + p + '[data-id="' + node.key + '"]').button(data.buttons[p]).click(function () {
                                         var cb = $(this).data('callback');
                                         if (cb) cb.call($(this), $(this).attr('data-id'));
                                     }).data('callback', data.buttons[p].click).attr('title', data.buttons[p].title || '');
@@ -1315,7 +1571,7 @@
                         }
 
                         if (data.editEnd) {
-                            $('.select-button-edit[data-id="' + node.key + '"]').button({
+                            $tr.find('.select-button-edit[data-id="' + node.key + '"]').button({
                                 text: false,
                                 icons: {
                                     primary:'ui-icon-pencil'
@@ -1324,7 +1580,7 @@
                                 $(this).data('node').editStart();
                             }).attr('title', data.texts.edit).data('node', node).css({width: 26, height: 20});
 
-                            $('.select-button-ok[data-id="' + node.key + '"]').button({
+                            $tr.find('.select-button-ok[data-id="' + node.key + '"]').button({
                                 text: false,
                                 icons: {
                                     primary:'ui-icon-check'
@@ -1335,7 +1591,7 @@
                                 node.editEnd(true);
                             }).attr('title', data.texts.ok).data('node', node).hide().css({width: 26, height: 20});
 
-                             $('.select-button-cancel[data-id="' + node.key + '"]').button({
+                            $tr.find('.select-button-cancel[data-id="' + node.key + '"]').button({
                                 text: false,
                                 icons: {
                                     primary:'ui-icon-close'
@@ -1415,10 +1671,10 @@
                     if (!data.objects[_data.node.key]) return false;
                 },
                 edit: function (event, _data) {
-                    $('.select-button-edit[data-id="' + _data.node.key + '"]').hide();
-                    $('.select-button-cancel[data-id="' + _data.node.key + '"]').show();
-                    $('.select-button-ok[data-id="' + _data.node.key + '"]').show();
-                    $('.select-button-custom[data-id="' + _data.node.key + '"]').hide();
+                    $dlg.find('.select-button-edit[data-id="'   + _data.node.key + '"]').hide();
+                    $dlg.find('.select-button-cancel[data-id="' + _data.node.key + '"]').show();
+                    $dlg.find('.select-button-ok[data-id="'     + _data.node.key + '"]').show();
+                    $dlg.find('.select-button-custom[data-id="' + _data.node.key + '"]').hide();
 
                     var node = _data.node;
                     var $tdList = $(node.tr).find('>td');
@@ -1431,18 +1687,18 @@
 
                         if (name === 'name') {
                             $tdList.eq(2 + c).html('<input type="text" id="select_edit_' + name + '" value="' + data.objects[_data.node.key].common[name] + '" style="width: 100%"/>');
-                            inputs[name] = $('#select_edit_' + name);
+                            inputs[name] = $dlg.find('#select_edit_' + name);
                         }
                     }
                     for (var i in inputs) {
                         inputs[i].keyup(function (e) {
                             var node;
-                            if (e.which == 13) {
+                            if (e.which === 13) {
                                 // end edit
                                 node = $(this).data('node');
                                 node.editFinished = true;
                                 node.editEnd(true);
-                            } else if (e.which == 27) {
+                            } else if (e.which === 27) {
                                 // end edit
                                 node = $(this).data('node');
                                 node.editFinished = true;
@@ -1465,7 +1721,7 @@
                         var name = data.columns[c];
                         if (typeof name === 'object') name = name.name;
                         if (name === 'name') {
-                            editValues[name] = $('#select_edit_' + name).val();
+                            editValues[name] = $dlg.find('#select_edit_' + name).val();
                         }
                     }
 
@@ -1478,10 +1734,10 @@
                     return true;
                 },
                 close: function (event, _data) {
-                    $('.select-button-edit[data-id="' + _data.node.key + '"]').show();
-                    $('.select-button-cancel[data-id="' + _data.node.key + '"]').hide();
-                    $('.select-button-ok[data-id="' + _data.node.key + '"]').hide();
-                    $('.select-button-custom[data-id="' + _data.node.key + '"]').show();
+                    $dlg.find('.select-button-edit[data-id="' + _data.node.key + '"]').show();
+                    $dlg.find('.select-button-cancel[data-id="' + _data.node.key + '"]').hide();
+                    $dlg.find('.select-button-ok[data-id="' + _data.node.key + '"]').hide();
+                    $dlg.find('.select-button-custom[data-id="' + _data.node.key + '"]').show();
                     if (_data.node.editFinished !== undefined) delete _data.node.editFinished;
                     // Editor was removed
                     if (data.save) {
@@ -1555,6 +1811,7 @@
             }
         });
 
+
         function customFilter(node) {
             if (node.parent && node.parent.match) return true;
 
@@ -1571,7 +1828,7 @@
                     var name = data.columns[c];
                     if (typeof name === 'object') name = name.name;
                     if (name === 'image') {
-                        continue;
+                        //continue;
                     } else if (name === 'role' || name === 'type' || name === 'room' || name === 'function') {
                         value = $('#filter_' + name + '_' + data.instance).val();
                         if (value) {
@@ -1605,7 +1862,11 @@
                     if (!isCommon || data.objects[node.key].common[f] === undefined || data.objects[node.key].common[f].toLowerCase().indexOf(data.filterVals[f]) === -1) return false;
                 } else
                 if (f === 'role') {
-                    if (!isCommon || data.objects[node.key].common[f] === undefined || data.objects[node.key].common[f].indexOf(data.filterVals[f]) === -1) return false;
+                    if (data.roleExactly) {
+                        if (!isCommon || data.objects[node.key].common[f] === undefined || data.objects[node.key].common[f] !== data.filterVals[f]) return false;
+                    } else {
+                        if (!isCommon || data.objects[node.key].common[f] === undefined || data.objects[node.key].common[f].indexOf(data.filterVals[f]) === -1) return false;
+                    }
                 } else
                 if (f === 'type') {
                     if (!data.objects[node.key] || data.objects[node.key][f] === undefined || data.objects[node.key][f] !== data.filterVals[f]) return false;
@@ -1641,6 +1902,8 @@
             return true;
         }
 
+        restoreExpandeds(data, expandeds);
+
         $('.filter_' + data.instance).change(function () {
             data.filterVals = null;
             $('#process_running_' + data.instance).show();
@@ -1649,7 +1912,7 @@
         }).keyup(function () {
             var tree = data.$tree[0];
             if (tree._timer) tree._timer = clearTimeout(tree._timer);
-            
+
             var that = this;
             tree._timer = setTimeout(function () {
                 $(that).trigger('change');
@@ -1664,7 +1927,9 @@
             $('#process_running_' + data.instance).show();
             setTimeout(function () {
                 data.$tree.fancytree('getRootNode').visit(function (node) {
-                    if (!data.filterVals.length || node.match || node.subMatch) node.setExpanded(false);
+                    if (!data.filterVals.length || node.match || node.subMatch) {
+                        node.setExpanded(false);
+                    }
                 });
                 $('#process_running_' + data.instance).hide();
             }, 100);
@@ -1674,8 +1939,9 @@
             $('#process_running_' + data.instance).show();
             setTimeout(function () {
                 data.$tree.fancytree('getRootNode').visit(function (node) {
-                    if (!data.filterVals.length || node.match || node.subMatch)
+                    if (!data.filterVals.length || node.match || node.subMatch) {
                         node.setExpanded(true);
+                    }
                 });
                 $('#process_running_' + data.instance).hide();
             }, 100);
@@ -1704,10 +1970,9 @@
         }).attr('title', data.texts.tree);
 
         if (data.list) {
-            $('#btn_list_' + data.instance).addClass('ui-state-error');
+            $('#btn_list_' + data.instance).addClass('ui-state-error').attr('title', data.texts.list);;
             $('#btn_expand_' + data.instance).hide();
             $('#btn_collapse_' + data.instance).hide();
-            $('#btn_list_' + data.instance).attr('title', data.texts.list);
         }
 
         $('#btn_refresh_' + data.instance).button({icons: {primary: 'ui-icon-refresh'}, text: false}).css({width: 18, height: 18}).click(function () {
@@ -1718,6 +1983,34 @@
                 $('#process_running_' + data.instance).hide();
             }, 100);
         }).attr('title', data.texts.refresh);
+
+        $('#btn_sort_' + data.instance)
+            .button({icons: {primary: 'ui-icon-bookmark'}, text: false})
+            .css({width: 18, height: 18})
+            .click(function () {
+                $('#process_running_' + data.instance).show();
+
+
+                data.sort = !data.sort;
+                if (data.sort) {
+                    $('#btn_sort_' + data.instance).addClass('ui-state-error');
+                } else {
+                    $('#btn_sort_' + data.instance).removeClass('ui-state-error');
+                }
+                storeSettings(data, true);
+
+
+                setTimeout(function () {
+                    data.inited = false;
+                    sortTree(data);
+                    //initTreeDialog(data.$dlg);
+                    $('#process_running_' + data.instance).hide();
+                }, 100);
+            }).attr('title', data.texts.sort);
+
+        if (data.sort) {
+            $('#btn_sort_' + data.instance).addClass('ui-state-error');
+        }
 
         $('#btn_select_all_' + data.instance).button({icons: {primary: 'ui-icon-circle-check'}, text: false}).css({width: 18, height: 18}).click(function () {
             $('#process_running_' + data.instance).show();
@@ -1805,13 +2098,14 @@
 
         // set preset filters
         for (var field in data.filterPresets) {
-            if (!data.filterPresets[field]) continue;
+            if (!data.filterPresets.hasOwnProperty(field) || !data.filterPresets[field]) continue;
             if (typeof data.filterPresets[field] === 'object') {
                 $('#filter_' + field + '_' + data.instance).val(data.filterPresets[field][0]).trigger('change');
             } else {
                 $('#filter_' + field + '_' + data.instance).val(data.filterPresets[field]).trigger('change');
             }
         }
+        sortTree(data);
     }
 
     function storeSettings(data, force) {
@@ -1822,11 +2116,13 @@
         if (force) {
             window.localStorage.setItem(data.name + '-filter', JSON.stringify(data.filterVals));
             window.localStorage.setItem(data.name + '-expert', JSON.stringify(data.expertMode));
+            window.localStorage.setItem(data.name + '-sort', JSON.stringify(data.sort));
             data.timer = null;
         } else {
             data.timer = setTimeout(function () {
                 window.localStorage.setItem(data.name + '-filter', JSON.stringify(data.filterVals));
                 window.localStorage.setItem(data.name + '-expert', JSON.stringify(data.expertMode));
+                window.localStorage.setItem(data.name + '-sort', JSON.stringify(data.sort));
             }, 500);
         }
     }
@@ -1839,7 +2135,7 @@
                     f = JSON.parse(f);
                     for (var field in f) {
                         if (field === 'length') continue;
-                        if (data.filterPresets[field]) continue;
+                        if (!data.filterPresets.hasOwnProperty(field) || data.filterPresets[field]) continue;
                         $('#filter_' + field + '_' + data.instance).val(f[field]).trigger('change');
                     }
                 } catch(e) {
@@ -1867,6 +2163,10 @@
                 zindex:     null,
                 list:       false,
                 name:       null,
+                sortConfig:       {
+                    statesFirst:     true,
+                    ignoreSortOrder: false
+                },
                 columns: ['image', 'name', 'type', 'role', 'enum', 'room', 'function', 'value', 'button']
             }, options);
 
@@ -1894,6 +2194,7 @@
                 refresh:  'Rebuild tree',
                 edit:     'Edit',
                 ok:       'Ok',
+                push:     'Trigger event',
                 wait:     'Processing...',
                 list:     'Show list view',
                 tree:     'Show tree view',
@@ -1999,6 +2300,9 @@
                             data.objects = res;
                             data.socket.emit('getStates', function (err, res) {
                                 data.states = res;
+                                if (data.readyCallback) {
+                                    data.readyCallback(err, data.objects, data.states);
+                                }
                             });
                         });
                     });
@@ -2146,13 +2450,14 @@
                 if (!data || !data.$tree) continue;
 
                 var tree = data.$tree.fancytree('getTree');
-                var node = null;
-                tree.visit(function (n) {
-                    if (n.key === id) {
-                        node = n;
-                        return false;
-                    }
-                });
+                var node = tree.getNodeByKey(id);
+                // var node = null;
+                // tree.visit(function (n) {
+                //     if (n.key === id) {
+                //         node = n;
+                //         return false;
+                //     }
+                // });
                 var result = {
                     id: id,
                     parent: (node && node.parent && node.parent.parent) ? node.parent.key : null,
@@ -2210,20 +2515,21 @@
 
                 data.states[id] = state;
                 var tree = data.$tree.fancytree('getTree');
-                var node = null;
-                tree.visit(function (n) {
-                    if (n.key === id) {
-                        node = n;
-                        return false;
-                    }
-                });
+                var node = tree.getNodeByKey(id);
+                // var node = null;
+                // tree.visit(function (n) {
+                //     if (n.key === id) {
+                //         node = n;
+                //         return false;
+                //     }
+                // });
                 if (node) node.render(true);
             }
             return this;
         },
         // update objects
         object: function (id, obj) {
-            for (var k = 0; k < this.length; k++) {
+            for (var k = 0, len = this.length; k < len; k++) {
                 var dlg = this[k];
                 var $dlg = $(dlg);
                 var data = $dlg.data('selectId');
@@ -2239,13 +2545,14 @@
                 }
 
                 var tree = data.$tree.fancytree('getTree');
-                var node = null;
-                tree.visit(function (n) {
-                    if (n.key === id) {
-                        node = n;
-                        return false;
-                    }
-                });
+                var node = tree.getNodeByKey(id);
+                // var node = null;
+                // tree.visit(function (n) {
+                //     if (n.key === id) {
+                //         node = n;
+                //         return false;
+                //     }
+                // });
 
                 // If new node
                 if (!node && obj) {
@@ -2260,12 +2567,13 @@
 
                     for (var i = 0; i < addedNodes.length; i++) {
                         if (!addedNodes[i].parent.root) {
-                            tree.visit(function (n) {
-                                if (n.key === addedNodes[i].parent.key) {
-                                    node = n;
-                                    return false;
-                                }
-                            });
+                            node = tree.getNodeByKey(addedNodes[i].parent.key);
+                            // tree.visit(function (n) {
+                            //     if (n.key === addedNodes[i].parent.key) {
+                            //         node = n;
+                            //         return false;
+                            //     }
+                            // });
 
                         } else {
                             node = data.$tree.fancytree('getRootNode');
@@ -2301,20 +2609,22 @@
                     delete data.objects[id];
                     deleteTree(data, id);
                     if (node) {
-                        if (node.children && node.children.length) {
-                            if (node.children.length === 1) {
-                                node.folder = false;
-                                node.expanded = false;
-                            }
-                            node.render(true);
-                        } else {
-                            if (node.parent && node.parent.children.length === 1) {
-                                node.parent.folder = false;
-                                node.parent.expanded = false;
-                                node.parent.render(true);
-                            }
-                            node.remove();
-                        }
+                        node.removeChildren();
+                        node.remove();
+                        // if (node.children && node.children.length) {
+                        //     if (node.children.length === 1) {
+                        //         node.folder = false;
+                        //         node.expanded = false;
+                        //     }
+                        //     node.render(true);
+                        // } else {
+                        //     if (node.parent && node.parent.children.length === 1) {
+                        //         node.parent.folder = false;
+                        //         node.parent.expanded = false;
+                        //         node.parent.render(true);
+                        //     }
+                        //     node.remove();
+                        // }
                     }
                 } else {
                     // object updated
@@ -2360,12 +2670,13 @@
             return null;
         },
         getActual: function () {
-            for (var k = 0; k < this.length; k++) {
-                var dlg = this[k];
-                var $dlg = $(dlg);
-                var data = $dlg.data('selectId');
-                return data ? data.selectedID : null;
-            }
+            //for (var k = 0; k < this.length; k++) {
+            //
+            //}
+            var dlg = this[0];
+            var $dlg = $(dlg);
+            var data = $dlg.data('selectId');
+            return data ? data.selectedID : null;
         }
     };
 
