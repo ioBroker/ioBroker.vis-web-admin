@@ -965,6 +965,12 @@ function initWebServer(settings) {
                     // Fill the projects
                     readProjects(req.user ? 'system.user.' + req.user : adapter.config.defaultUser, function (err, projects) {
                         if (!err && projects) {
+                            // images first
+                            projects.sort(function (a, b) {
+                                if (a.image && !b.image) return -1;
+                                if (!a.image && b.image) return 1;
+                                return 0;
+                            });
                             text = text.replace(/%%PROJECTS%%/, JSON.stringify(projects));
                             res.send(text);
                         } else {
