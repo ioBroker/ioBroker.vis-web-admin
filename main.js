@@ -969,6 +969,28 @@ function initWebServer(settings) {
                             projects.sort(function (a, b) {
                                 if (a.image && !b.image) return -1;
                                 if (!a.image && b.image) return 1;
+                                var aName = a.name;
+                                var bName = b.name;
+                                if (a.image) {
+                                    var parts = a.image.split('/');
+                                    aName = parts.pop();
+                                    parts = aName.split('.');
+                                    parts.pop();
+                                    aName = parts.join('.');
+                                    aName = aName.replace(/_/g, ' ');
+                                    aName = aName[0].toUpperCase() + aName.substring(1);
+                                }
+                                if (b.image) {
+                                    var parts_ = b.image.split('/');
+                                    bName = parts_.pop();
+                                    parts_ = bName.split('.');
+                                    parts_.pop();
+                                    bName = parts_.join('.');
+                                    bName = bName.replace(/_/g, ' ');
+                                    bName = bName[0].toUpperCase() + bName.substring(1);
+                                }
+                                if (aName > bName) return 1;
+                                if (aName < bName) return -1;
                                 return 0;
                             });
                             text = text.replace(/%%PROJECTS%%/, JSON.stringify(projects));

@@ -15,7 +15,6 @@
             background: grey;
         }
 
-
         * {
             margin: 0;
             padding: 0
@@ -218,66 +217,68 @@
     $('#createNew').button({
         icons: {primary: 'ui-icon-clipboard'}
     }).click(function () {
-        if (!$('#newUserDlg').data('inited')) {
-            $('#newUserDlg').data('inited', true);
-            $('#newUserDlg').dialog({
-                autoOpen: false,
-                modal:    true,
-                width:    370,
-                title:    _('Create new account'),
-                buttons: [
-                    {
-                        text: _('Ok'),
-                        click: function () {
-                            if (!$('#password').val()) {
-                                alert('Empty password is not allowed');
-                                return;
-                            }
-                            if ($('#password').val() != $('#passwordRepeat').val()) {
-                                alert('Repeat password is not equal!');
-                                return;
-                            }
-                            if (!$('#user').val()) {
-                                alert('Empty user name is not allowed!');
-                                return;
-                            }
-                            if ($('#user').val().match(/\s/)) {
-                                alert('Spaces are not allowed in the user name!');
-                                return;
-                            }
-                            if ($('#user').val().match(/\./)) {
-                                alert('Dots are not allowed in the user name!');
-                                return;
-                            }
+        var $newUserDlg = $('#newUserDlg');
+        if (!$newUserDlg.data('inited')) {
+            $newUserDlg
+                .data('inited', true)
+                .dialog({
+                    autoOpen: false,
+                    modal:    true,
+                    width:    370,
+                    title:    _('Create new account'),
+                    buttons: [
+                        {
+                            text: _('Ok'),
+                            click: function () {
+                                if (!$('#password').val()) {
+                                    alert('Empty password is not allowed');
+                                    return;
+                                }
+                                if ($('#password').val() != $('#passwordRepeat').val()) {
+                                    alert('Repeat password is not equal!');
+                                    return;
+                                }
+                                if (!$('#user').val()) {
+                                    alert('Empty user name is not allowed!');
+                                    return;
+                                }
+                                if ($('#user').val().match(/\s/)) {
+                                    alert('Spaces are not allowed in the user name!');
+                                    return;
+                                }
+                                if ($('#user').val().match(/\./)) {
+                                    alert('Dots are not allowed in the user name!');
+                                    return;
+                                }
 
-                            $.ajax({
-                                url: "create.html",
-                                data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
-                                success: function (result) {
-                                    if (result && result.status == 'ok') {
-                                        window.alert('Everything is OK. Login now');
-                                        var redirect = '%%REDIRECT%%';
-                                        redirect = redirect.replace('redirect', location.hostname);
-                                        location.href = redirect;
-                                    } else {
-                                        window.alert('Error: ' + result ? result.error : '');
-                                    }
-                                },
-                                dataType: 'json'
-                            });
+                                $.ajax({
+                                    url: "create.html",
+                                    data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
+                                    success: function (result) {
+                                        if (result && result.status == 'ok') {
+                                            window.alert('Everything is OK. Login now');
+                                            var redirect = '%%REDIRECT%%';
+                                            redirect = redirect.replace('redirect', location.hostname);
+                                            location.href = redirect;
+                                        } else {
+                                            window.alert('Error: ' + result ? result.error : '');
+                                        }
+                                    },
+                                    dataType: 'json'
+                                });
+                            }
+                        },
+                        {
+                            text: _('Cancel'),
+                            click: function () {
+                                $(this).dialog('close');
+                            }
                         }
-                    },
-                    {
-                        text: _('Cancel'),
-                        click: function () {
-                            $(this).dialog('close');
-                        }
-                    }
 
-                ]
-            });
+                    ]
+                });
         }
-        $('#newUserDlg').dialog('open');
+        $newUserDlg.dialog('open');
     });
 
     var projects = '%%PROJECTS%%';
@@ -288,7 +289,7 @@
         projects = null;
     }
 
-    if (projects && typeof projects == 'object') {
+    if (projects && typeof projects === 'object') {
         var redirect = '%%REDIRECT%%';
         redirect = redirect.replace('redirect', location.hostname);
         var text = '';
