@@ -1005,6 +1005,9 @@ function initWebServer(settings) {
                                 if (aName < bName) return -1;
                                 return 0;
                             });
+                            for (var p = 0; p < projects.length; p++) {
+                                projects[p].owner = projects[p].owner.replace(/[^-.A-Za-züäößÖÄÜа-яА-Я@+$§0-9=?!&# ]/, '');
+                            }
                             text = text.replace(/%%PROJECTS%%/, JSON.stringify(projects));
                             res.send(text);
                         } else {

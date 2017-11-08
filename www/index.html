@@ -170,7 +170,7 @@
 </div>
 <script type="text/javascript">
     systemLang = navigator.language || navigator.userLanguage;
-    if (systemLang != 'en' && systemLang != 'de' && systemLang != 'ru') {
+    if (systemLang !== 'en' && systemLang !== 'de' && systemLang !== 'ru') {
         systemLang = 'en';
     }
 
@@ -230,32 +230,34 @@
                         {
                             text: _('Ok'),
                             click: function () {
-                                if (!$('#password').val()) {
+                                var $password = $('#password');
+                                if (!$password.val()) {
                                     alert('Empty password is not allowed');
                                     return;
                                 }
-                                if ($('#password').val() != $('#passwordRepeat').val()) {
+                                if ($password.val() !== $('#passwordRepeat').val()) {
                                     alert('Repeat password is not equal!');
                                     return;
                                 }
-                                if (!$('#user').val()) {
+                                var $user = $('#user');
+                                if (!$user.val()) {
                                     alert('Empty user name is not allowed!');
                                     return;
                                 }
-                                if ($('#user').val().match(/\s/)) {
+                                if ($user.val().match(/\s/)) {
                                     alert('Spaces are not allowed in the user name!');
                                     return;
                                 }
-                                if ($('#user').val().match(/\./)) {
+                                if ($user.val().match(/\./)) {
                                     alert('Dots are not allowed in the user name!');
                                     return;
                                 }
 
                                 $.ajax({
                                     url: "create.html",
-                                    data: {user: $('#user').val(), password: $('#password').val(), mail: $('#mail').val()},
+                                    data: {user: $user.val(), password: $password.val(), mail: $('#mail').val()},
                                     success: function (result) {
-                                        if (result && result.status == 'ok') {
+                                        if (result && result.status === 'ok') {
                                             window.alert('Everything is OK. Login now');
                                             var redirect = '%%REDIRECT%%';
                                             redirect = redirect.replace('redirect', location.hostname);
