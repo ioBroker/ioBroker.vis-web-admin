@@ -191,9 +191,21 @@ function main() {
 }
 
 function addUser(user, pw, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options = null;
+    }
+
+    if (!user.match(/^[-.A-Za-züäößÖÄÜа-яА-Я@+$§0-9=?!&# ]+$/)) {
+        if (typeof callback === 'function') {
+            callback('Invalid characters in the name. Only following special characters are allowed: -@+$§=?!&# and letters');
+        }
+        return;
+    }
+
     adapter.getForeignObject('system.user.' + user, options, function (err, obj) {
         if (obj) {
-            if (typeof callback == 'function') callback('User yet exists');
+            if (typeof callback === 'function') callback('User yet exists');
         } else {
             adapter.setForeignObject('system.user.' + user, {
                 type: 'user',
@@ -272,10 +284,10 @@ function readDirs(dirs, cb, result) {
 }
 
 var specialScreen = [
-    {"link": "flot/edit.html",      "name": "flot editor",  "img": "flot.admin/flot.png",       "color": "gray",  "order": 4},
-    {"link": "mobile/index.html",   "name": "mobile",       "img": "mobile.admin/mobile.png",   "color": "black", "order": 3},
-    {"link": "vis/edit.html",       "name": "vis editor",   "img": "vis/img/faviconEdit.png",   "color": "green", "order": 2},
-    {"link": "vis/index.html",      "name": "vis",          "img": "vis/img/favicon.png",       "color": "blue",  "order": 1}
+    {link: 'flot/edit.html',      name: 'flot editor',  img: 'flot.admin/flot.png',       color: 'gray',  order: 4},
+    {link: 'mobile/index.html',   name: 'mobile',       img: 'mobile.admin/mobile.png',   color: 'black', order: 3},
+    {link: 'vis/edit.html',       name: 'vis editor',   img: 'vis/img/faviconEdit.png',   color: 'green', order: 2},
+    {link: 'vis/index.html',      name: 'vis',          img: 'vis/img/favicon.png',       color: 'blue',  order: 1}
 ];
 
 var indexHtml;

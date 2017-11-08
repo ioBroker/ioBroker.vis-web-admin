@@ -5,6 +5,9 @@
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.4.2 (2017-11-08)
+* (bluefox) filter user names
+
 ### 1.4.1 (2017-10-12)
 * (bluefox) update
 
