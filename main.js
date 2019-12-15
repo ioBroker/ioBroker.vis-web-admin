@@ -1225,10 +1225,10 @@ function initWebServer(settings) {
                     res.contentType('text/html');
 
                     // Fill the projects
-                    readProjects(req.user ? 'system.user.' + req.user : adapter.config.defaultUser, function (err, projects) {
+                    readProjects(req.user ? 'system.user.' + req.user : adapter.config.defaultUser, (err, projects) => {
                         if (!err && projects) {
                             // images first
-                            projects.sort(function (a, b) {
+                            projects.sort((a, b) => {
                                 if (a.image && !b.image) return -1;
                                 if (!a.image && b.image) return 1;
                                 let aName = a.name;
@@ -1256,7 +1256,7 @@ function initWebServer(settings) {
                                 return 0;
                             });
                             for (let p = 0; p < projects.length; p++) {
-                                projects[p].owner = projects[p].owner.replace(/[^-.A-Za-züäößÖÄÜа-яА-Я@+$§0-9=?!&# ]/, '');
+                                projects[p].owner = (projects[p].owner || '').replace(/[^-.A-Za-züäößÖÄÜа-яА-Я@+$§0-9=?!&# ]/, '');
                             }
                             text = text.replace(/%%PROJECTS%%/, JSON.stringify(projects));
                             res.send(text);

@@ -4,7 +4,7 @@
 Special adapter for iobroker.net
 
 ## Changelog
-### 1.5.1 (2019-12-15)
+### 1.5.2 (2019-12-15)
 * (bluefox) updated packages
 
 ### 1.4.2 (2017-11-08)

@@ -1,10 +1,10 @@
 {
     "common": {
         "name":                     "vis-web-admin",
-        "version":                  "1.5.1",
+        "version":                  "1.5.2",
         "title":                    "Special adapter for ioBroker to manage vis views",
 		"news": {
-            "1.5.1": {
+            "1.5.2": {
                 "en": "updated packages",
                 "de": "aktualisierte Pakete",
                 "ru": "обновленные пакеты",

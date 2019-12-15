@@ -1,6 +1,6 @@
 {
   "name": "iobroker.vis-web-admin",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "ioBroker simple vis-web-admin Adapter",
   "author": {
     "name": "bluefox",
