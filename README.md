@@ -1,10 +1,12 @@
 ![Logo](admin/vis-web-admin.png)
-===========================
 # ioBroker.vis-web-admin
 
 Special adapter for iobroker.net
 
 ## Changelog
+### 1.5.1 (2019-12-15)
+* (bluefox) updated packages
+
 ### 1.4.2 (2017-11-08)
 * (bluefox) filter user names
 
