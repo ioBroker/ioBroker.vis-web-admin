@@ -108,9 +108,8 @@ function startAdapter(options) {
                     obj.native.webInstance === 'adapter.namespace'
                 )
             ) {
-                adapter.setForeignState('system.adapter.' + adapter.namespace + '.alive', false, true, () => {
-                    adapter.terminate ? adapter.terminate(-100): process.exit(-100);
-                });
+                adapter.setForeignState('system.adapter.' + adapter.namespace + '.alive', false, true, () =>
+                    adapter.terminate ? adapter.terminate(-100): process.exit(-100));
                 return;
             }
 
@@ -954,7 +953,7 @@ function initWebServer(settings) {
                     /^\/login\//.test(req.originalUrl) ||
                     /\.ico$/.test(req.originalUrl)
                 ) return next();
-				
+
 				autoLogonOrRedirectToLogin(req, res, next, '/login/index.html?href=' + encodeURIComponent(req.originalUrl));
             });
         } else {
