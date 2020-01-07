@@ -2,6 +2,9 @@ gulpfile.js
 tasks
 test
 tmp
+.git
+.github
+node_modules
 .idea
 .travis.yml
 appveyor.yml
